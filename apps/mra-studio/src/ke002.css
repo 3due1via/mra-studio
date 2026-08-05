@@ -1,0 +1,10 @@
+.notice { margin: 18px 0; padding: 12px 14px; border-radius: 8px; font-weight: 700; }
+.notice.success { color: #8ce4ac; background: rgba(55,151,91,.16); border: 1px solid rgba(85,190,122,.3); }
+.notice.error { color: #ffc1c1; background: rgba(180,67,67,.16); border: 1px solid rgba(220,90,100,.3); }
+.status-badge { display:inline-flex; padding:5px 9px; border-radius:99px; font-size:11px; font-weight:800; text-transform:uppercase; }
+.status-draft { color:#f2cf78; background:rgba(215,173,66,.13); }
+.status-review { color:#8fc7ff; background:rgba(80,145,210,.15); }
+.status-verified, .status-approved, .status-published { color:#8ce4ac; background:rgba(55,151,91,.16); }
+.status-archived, .status-rejected { color:#c2cbd3; background:rgba(120,135,150,.16); }
+.row-actions { display:flex; gap:8px; }
+.status-error { color:#ff9999; }

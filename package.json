@@ -1,0 +1,18 @@
+{
+  "name": "mra-studio-monorepo",
+  "private": true,
+  "version": "0.3.0",
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev:studio": "pnpm --filter @mra/studio dev",
+    "build:studio": "pnpm --filter @mra/studio build",
+    "typecheck:studio": "pnpm --filter @mra/studio typecheck",
+    "test:api": "docker compose run --rm api pytest",
+    "build": "pnpm build:studio"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

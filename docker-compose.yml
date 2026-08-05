@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mra}
+      POSTGRES_USER: ${POSTGRES_USER:-mra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mra_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - mra_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mra} -d ${POSTGRES_DB:-mra}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/mra-api/Dockerfile
+    environment:
+      APP_ENV: development
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://mra:mra_dev_password@postgres:5432/mra}
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/mra-api:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  studio:
+    build:
+      context: .
+      dockerfile: apps/mra-studio/Dockerfile
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/mra-studio:/workspace/apps/mra-studio
+      - studio_node_modules:/workspace/apps/mra-studio/node_modules
+    depends_on:
+      - api
+
+volumes:
+  mra_postgres_data:
+  studio_node_modules:
