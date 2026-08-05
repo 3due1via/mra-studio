@@ -8,6 +8,7 @@ from app.repositories.knowledge_repository import (
     KnowledgeRepositoryProtocol,
 )
 from app.schemas import KnowledgeCardCreate, KnowledgeCardUpdate
+from app.services.knowledge_revision_service import KnowledgeRevisionService
 
 
 class KnowledgeCardNotFoundError(Exception):
@@ -22,8 +23,10 @@ class KnowledgeService:
     def __init__(
         self,
         repository: KnowledgeRepositoryProtocol,
+        revision_service: KnowledgeRevisionService | None = None,
     ) -> None:
         self.repository = repository
+        self.revision_service = revision_service
 
     def list_cards(
         self,
@@ -52,7 +55,10 @@ class KnowledgeService:
         card = KnowledgeCard(**payload.model_dump())
 
         try:
-            return self.repository.add(card)
+            created = self.repository.add(card)
+            if self.revision_service is not None:
+                self.revision_service.record(created, action="create")
+            return created
         except IntegrityError as exc:
             raise KnowledgeCardCodeConflictError from exc
 
@@ -68,7 +74,10 @@ class KnowledgeService:
         ).items():
             setattr(card, field, value)
 
-        return self.repository.save(card)
+        saved = self.repository.save(card)
+        if self.revision_service is not None:
+            self.revision_service.record(saved, action="update")
+        return saved
 
     def delete_card(self, card_id: uuid.UUID) -> None:
         card = self.get_card(card_id)

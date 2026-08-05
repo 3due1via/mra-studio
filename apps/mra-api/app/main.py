@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.db import Base, engine
 from app.routers.knowledge import router as knowledge_router
+from app.routers.knowledge_relations import router as knowledge_relations_router
+from app.routers.knowledge_revisions import router as knowledge_revisions_router
 
 
 @asynccontextmanager
@@ -16,7 +18,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.3.1",
+    version="0.5.0",
     description="API principale della piattaforma MRA Studio.",
     lifespan=lifespan,
 )
@@ -30,6 +32,8 @@ app.add_middleware(
 )
 
 app.include_router(knowledge_router)
+app.include_router(knowledge_relations_router)
+app.include_router(knowledge_revisions_router)
 
 
 @app.get("/", tags=["system"])
@@ -46,7 +50,7 @@ def health() -> dict[str, str]:
     return {
         "status": "ok",
         "service": settings.app_name,
-        "version": "0.3.1",
+        "version": "0.5.0",
     }
 
 
@@ -54,6 +58,6 @@ def health() -> dict[str, str]:
 def version() -> dict[str, str]:
     return {
         "name": settings.app_name,
-        "version": "0.3.1",
+        "version": "0.5.0",
         "environment": settings.app_env,
     }

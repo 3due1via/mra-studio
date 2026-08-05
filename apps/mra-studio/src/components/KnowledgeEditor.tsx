@@ -1,10 +1,18 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { KnowledgeCard, KnowledgeCardInput } from "../types/knowledge";
-import { KnowledgeContentSection } from "./KnowledgeContentSection";
+import { KnowledgeDescriptionSection } from "./KnowledgeDescriptionSection";
+import { KnowledgeDiagnosisSection } from "./KnowledgeDiagnosisSection";
 import { KnowledgeEditorFooter } from "./KnowledgeEditorFooter";
 import { KnowledgeEditorHeader } from "./KnowledgeEditorHeader";
 import { KnowledgeGeneralSection } from "./KnowledgeGeneralSection";
+import { KnowledgeProcedureSection } from "./KnowledgeProcedureSection";
+import { KnowledgeRelationsSection } from "./KnowledgeRelationsSection";
+import { KnowledgeRevisionsSection } from "./KnowledgeRevisionsSection";
+import { KnowledgeQualityPanel } from "./KnowledgeQualityPanel";
+import { KnowledgeTabs, type KnowledgeTab } from "./KnowledgeTabs";
+import { KnowledgeWorkflowBar } from "./KnowledgeWorkflowBar";
+import { calculateQuality } from "./knowledgeQuality";
 
 const empty: KnowledgeCardInput = {
   code: "",
@@ -25,6 +33,7 @@ type Props = {
   card?: KnowledgeCard | null;
   onCancel: () => void;
   onSave: (values: KnowledgeCardInput) => Promise<void>;
+  onRestored: (card: KnowledgeCard) => void;
 };
 
 function toFormValues(card?: KnowledgeCard | null): KnowledgeCardInput {
@@ -46,16 +55,38 @@ function toFormValues(card?: KnowledgeCard | null): KnowledgeCardInput {
   };
 }
 
-export function KnowledgeEditor({ card, onCancel, onSave }: Props) {
-  const { register, handleSubmit, reset, watch, formState } =
+export function KnowledgeEditor({ card, onCancel, onSave, onRestored }: Props) {
+  const [activeTab, setActiveTab] = useState<KnowledgeTab>("general");
+  const { register, handleSubmit, reset, watch, setValue, formState } =
     useForm<KnowledgeCardInput>({ defaultValues: empty });
 
   useEffect(() => {
     reset(toFormValues(card));
+    setActiveTab("general");
   }, [card, reset]);
 
-  const status = watch("status");
-  const version = watch("version");
+  const values = watch();
+  const score = calculateQuality(values);
+
+  const saveWithStatus = useCallback(
+    (status: KnowledgeCardInput["status"]) => {
+      setValue("status", status, { shouldDirty: true });
+      void handleSubmit((formValues) => onSave({ ...formValues, status }))();
+    },
+    [handleSubmit, onSave, setValue],
+  );
+
+  useEffect(() => {
+    const saveWithKeyboard = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        saveWithStatus(values.status || "draft");
+      }
+    };
+
+    window.addEventListener("keydown", saveWithKeyboard);
+    return () => window.removeEventListener("keydown", saveWithKeyboard);
+  }, [saveWithStatus, values.status]);
 
   return (
     <form className="editor-card" onSubmit={handleSubmit(onSave)}>
@@ -65,15 +96,52 @@ export function KnowledgeEditor({ card, onCancel, onSave }: Props) {
         onCancel={onCancel}
       />
 
-      <div className="knowledge-editor-body">
-        <KnowledgeGeneralSection register={register} isEditing={Boolean(card)} />
-        <KnowledgeContentSection register={register} />
+      <KnowledgeTabs activeTab={activeTab} onChange={setActiveTab} />
+
+      <div className="knowledge-editor-layout">
+        <div className="knowledge-editor-body knowledge-editor-tab-panel">
+          {activeTab === "general" ? (
+            <KnowledgeGeneralSection register={register} isEditing={Boolean(card)} />
+          ) : null}
+
+          {activeTab === "description" ? (
+            <KnowledgeDescriptionSection register={register} />
+          ) : null}
+
+          {activeTab === "diagnosis" ? (
+            <KnowledgeDiagnosisSection register={register} />
+          ) : null}
+
+          {activeTab === "procedure" ? (
+            <KnowledgeProcedureSection register={register} />
+          ) : null}
+
+          {activeTab === "relations" ? (
+            <KnowledgeRelationsSection card={card} />
+          ) : null}
+
+          {activeTab === "revisions" ? (
+            <KnowledgeRevisionsSection card={card} onRestored={onRestored} />
+          ) : null}
+        </div>
+
+        <KnowledgeQualityPanel values={values} isDirty={formState.isDirty} />
       </div>
 
+      <KnowledgeWorkflowBar
+        status={values.status}
+        score={score}
+        isSubmitting={formState.isSubmitting}
+        onSaveDraft={() => saveWithStatus("draft")}
+        onSendToReview={() => saveWithStatus("review")}
+        onPublish={() => saveWithStatus("published")}
+      />
+
       <KnowledgeEditorFooter
-        status={status}
-        version={version}
+        status={values.status}
+        version={values.version}
         isEditing={Boolean(card)}
+        isDirty={formState.isDirty}
       />
     </form>
   );

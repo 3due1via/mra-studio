@@ -139,3 +139,165 @@
   .field-full { grid-column: auto; }
   .knowledge-editor-footer { flex-wrap: wrap; }
 }
+
+/* KE-003.2 — Tabbed Knowledge Editor */
+.knowledge-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px 22px 0;
+  border-top: 1px solid #263f55;
+  border-bottom: 1px solid #263f55;
+  background: rgba(8, 25, 40, 0.72);
+}
+
+.knowledge-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 62px;
+  padding: 11px 14px 13px;
+  border: 0;
+  border-radius: 9px 9px 0 0;
+  background: transparent;
+  color: #8ca2b5;
+  text-align: left;
+}
+
+.knowledge-tab:hover {
+  background: rgba(23, 52, 77, 0.62);
+  color: #dce8f1;
+}
+
+.knowledge-tab.active {
+  background: #102b42;
+  color: #ffffff;
+}
+
+.knowledge-tab.active::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: -1px;
+  left: 12px;
+  height: 3px;
+  border-radius: 99px 99px 0 0;
+  background: #d7ad42;
+}
+
+.knowledge-tab strong {
+  font-size: 13px;
+}
+
+.knowledge-tab span {
+  color: #6f879a;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.knowledge-tab.active span {
+  color: #9fb5c6;
+}
+
+.knowledge-editor-tab-panel {
+  min-height: 390px;
+}
+
+.editor-single-column {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.editor-single-column textarea {
+  min-height: 240px;
+}
+
+@media (max-width: 780px) {
+  .knowledge-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .knowledge-tab {
+    border-radius: 8px;
+  }
+
+  .knowledge-tab.active::after {
+    right: 8px;
+    left: 8px;
+  }
+}
+
+
+/* BUILD 007 — Workflow editoriale */
+.knowledge-workflow-bar {
+  display: grid;
+  grid-template-columns: auto minmax(280px, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  margin-top: 4px;
+  padding: 18px 0;
+  border-top: 1px solid #263f55;
+}
+.workflow-current-state {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.workflow-current-state span {
+  color: #71899c;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.workflow-current-state strong {
+  color: #d7ad42;
+  text-transform: uppercase;
+}
+.workflow-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.workflow-steps span {
+  padding: 7px 10px;
+  border: 1px solid #29465d;
+  border-radius: 99px;
+  color: #7790a3;
+  font-size: 11px;
+  font-weight: 800;
+}
+.workflow-steps span.active {
+  border-color: #d7ad42;
+  background: rgba(215, 173, 66, 0.12);
+  color: #f4d77f;
+}
+.workflow-steps i {
+  width: 22px;
+  height: 1px;
+  background: #29465d;
+}
+.workflow-actions {
+  display: flex;
+  gap: 8px;
+}
+.button-review {
+  background: #1c4663 !important;
+  color: #e7f4ff !important;
+}
+.button-publish {
+  background: #287249 !important;
+  color: #effff4 !important;
+}
+.button-publish:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+@media (max-width: 1050px) {
+  .knowledge-workflow-bar { grid-template-columns: 1fr; }
+  .workflow-steps { justify-content: flex-start; }
+  .workflow-actions { flex-wrap: wrap; }
+}
