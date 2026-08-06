@@ -26,6 +26,10 @@ class KnowledgeRepositoryProtocol(Protocol):
 
     def delete(self, card: KnowledgeCard) -> None: ...
 
+    def commit(self) -> None: ...
+
+    def rollback(self) -> None: ...
+
 
 class SqlAlchemyKnowledgeRepository:
     def __init__(self, db: Session) -> None:
@@ -69,15 +73,21 @@ class SqlAlchemyKnowledgeRepository:
 
     def add(self, card: KnowledgeCard) -> KnowledgeCard:
         self.db.add(card)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(card)
         return card
 
     def save(self, card: KnowledgeCard) -> KnowledgeCard:
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(card)
         return card
 
     def delete(self, card: KnowledgeCard) -> None:
         self.db.delete(card)
+        self.db.flush()
+
+    def commit(self) -> None:
         self.db.commit()
+
+    def rollback(self) -> None:
+        self.db.rollback()

@@ -52,7 +52,9 @@ export function KnowledgePage() {
         <KnowledgeEditor
           card={editing}
           onCancel={() => setEditing(undefined)}
-          onSave={(values) => save.mutateAsync(values)}
+          onSave={async (values) => {
+            await save.mutateAsync(values);
+          }}
           onRestored={(restoredCard) => {
             setEditing(restoredCard);
             setMessage("Revisione ripristinata.");

@@ -679,4 +679,4 @@ Ordine operativo:
 5. aggiungere revisioni;
 6. aggiungere quality score;
 7. testare persistenza;
-8. creare il tag `v0.3.0`.
+8. creare il tag `v0.6.0`.

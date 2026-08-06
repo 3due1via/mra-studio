@@ -5,7 +5,7 @@ from typing import Any, Protocol
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import KnowledgeRevision
+from app.models import KnowledgeCard, KnowledgeRevision
 
 
 class KnowledgeRevisionRepositoryProtocol(Protocol):
@@ -58,6 +58,13 @@ class SqlAlchemyKnowledgeRevisionRepository:
         snapshot: dict[str, Any],
         note: str = "",
     ) -> KnowledgeRevision:
+        # Serialize revision allocation per card. PostgreSQL holds this row lock
+        # until the surrounding card/revision transaction commits or rolls back.
+        self.db.execute(
+            select(KnowledgeCard.id)
+            .where(KnowledgeCard.id == card_id)
+            .with_for_update()
+        )
         current_number = self.db.scalar(
             select(func.max(KnowledgeRevision.revision_number)).where(
                 KnowledgeRevision.card_id == card_id
@@ -71,6 +78,6 @@ class SqlAlchemyKnowledgeRevisionRepository:
             snapshot=snapshot,
         )
         self.db.add(revision)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(revision)
         return revision

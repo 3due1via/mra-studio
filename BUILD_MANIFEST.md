@@ -1,5 +1,5 @@
 # BUILD-001 Manifest
-Versione: 0.1.0
+Versione: 0.6.0
 - monorepo pnpm
 - frontend React, TypeScript e Vite
 - dashboard shell responsive

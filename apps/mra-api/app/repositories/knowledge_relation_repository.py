@@ -41,10 +41,16 @@ class SqlAlchemyKnowledgeRelationRepository:
 
     def add(self, relation: KnowledgeRelation) -> KnowledgeRelation:
         self.db.add(relation)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(relation)
         return relation
 
     def delete(self, relation: KnowledgeRelation) -> None:
         self.db.delete(relation)
+        self.db.flush()
+
+    def commit(self) -> None:
         self.db.commit()
+
+    def rollback(self) -> None:
+        self.db.rollback()

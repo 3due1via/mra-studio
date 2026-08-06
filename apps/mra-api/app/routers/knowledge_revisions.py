@@ -6,6 +6,7 @@ from app.dependencies import get_knowledge_revision_service
 from app.schemas import KnowledgeCardRead, KnowledgeRevisionRead
 from app.services.knowledge_revision_service import (
     KnowledgeRevisionNotFoundError,
+    KnowledgeRevisionPersistenceError,
     KnowledgeRevisionService,
 )
 
@@ -47,4 +48,9 @@ def restore_revision(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Revisione o Knowledge Card non trovata.",
+        ) from exc
+    except KnowledgeRevisionPersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Impossibile ripristinare la revisione.",
         ) from exc

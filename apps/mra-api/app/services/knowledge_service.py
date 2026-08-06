@@ -19,6 +19,16 @@ class KnowledgeCardCodeConflictError(Exception):
     pass
 
 
+class KnowledgePersistenceError(Exception):
+    pass
+
+
+def _is_code_conflict(exc: IntegrityError) -> bool:
+    diagnostic = getattr(exc.orig, "diag", None)
+    constraint = getattr(diagnostic, "constraint_name", "")
+    return constraint in {"knowledge_cards_code_key", "ix_knowledge_cards_code"}
+
+
 class KnowledgeService:
     def __init__(
         self,
@@ -58,9 +68,16 @@ class KnowledgeService:
             created = self.repository.add(card)
             if self.revision_service is not None:
                 self.revision_service.record(created, action="create")
+            self.repository.commit()
             return created
         except IntegrityError as exc:
-            raise KnowledgeCardCodeConflictError from exc
+            self.repository.rollback()
+            if _is_code_conflict(exc):
+                raise KnowledgeCardCodeConflictError from exc
+            raise KnowledgePersistenceError from exc
+        except Exception:
+            self.repository.rollback()
+            raise
 
     def update_card(
         self,
@@ -74,11 +91,27 @@ class KnowledgeService:
         ).items():
             setattr(card, field, value)
 
-        saved = self.repository.save(card)
-        if self.revision_service is not None:
-            self.revision_service.record(saved, action="update")
-        return saved
+        try:
+            saved = self.repository.save(card)
+            if self.revision_service is not None:
+                self.revision_service.record(saved, action="update")
+            self.repository.commit()
+            return saved
+        except IntegrityError as exc:
+            self.repository.rollback()
+            raise KnowledgePersistenceError from exc
+        except Exception:
+            self.repository.rollback()
+            raise
 
     def delete_card(self, card_id: uuid.UUID) -> None:
         card = self.get_card(card_id)
-        self.repository.delete(card)
+        try:
+            self.repository.delete(card)
+            self.repository.commit()
+        except IntegrityError as exc:
+            self.repository.rollback()
+            raise KnowledgePersistenceError from exc
+        except Exception:
+            self.repository.rollback()
+            raise

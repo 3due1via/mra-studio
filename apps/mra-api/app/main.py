@@ -1,27 +1,21 @@
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db import Base, engine
+from app.db import get_db
 from app.routers.knowledge import router as knowledge_router
 from app.routers.knowledge_relations import router as knowledge_relations_router
 from app.routers.knowledge_revisions import router as knowledge_revisions_router
 from app.routers.projects import router as projects_router
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    yield
-
-
 app = FastAPI(
     title=settings.app_name,
-    version="0.6.0",
+    version=settings.app_version,
     description="API principale della piattaforma MRA Studio.",
-    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -48,11 +42,20 @@ def root() -> dict[str, str]:
 
 
 @app.get("/health", tags=["system"])
-def health() -> dict[str, str]:
+def health(db: Session = Depends(get_db)) -> dict[str, str]:
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service unhealthy: database unavailable.",
+        ) from exc
     return {
         "status": "ok",
+        "api": "ok",
+        "database": "reachable",
         "service": settings.app_name,
-        "version": "0.6.0",
+        "version": settings.app_version,
     }
 
 
@@ -60,6 +63,6 @@ def health() -> dict[str, str]:
 def version() -> dict[str, str]:
     return {
         "name": settings.app_name,
-        "version": "0.6.0",
+        "version": settings.app_version,
         "environment": settings.app_env,
     }

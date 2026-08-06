@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "MRA API"
-    app_version: str = "0.1.0"
+    app_version: str = "0.6.0"
     app_env: str = "development"
     database_url: str = "postgresql+psycopg://mra:mra_dev_password@postgres:5432/mra"
     cors_origins: str = "http://localhost:5173"

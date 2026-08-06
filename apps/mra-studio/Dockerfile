@@ -4,10 +4,10 @@ WORKDIR /workspace
 
 RUN corepack enable     && corepack prepare pnpm@10.15.0 --activate
 
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/mra-studio/package.json apps/mra-studio/package.json
 
-RUN pnpm install --filter @mra/studio... --no-frozen-lockfile
+RUN pnpm install --filter @mra/studio... --frozen-lockfile
 
 COPY apps/mra-studio apps/mra-studio
 

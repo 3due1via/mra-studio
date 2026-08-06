@@ -11,6 +11,7 @@ from app.schemas import (
 from app.services.knowledge_service import (
     KnowledgeCardCodeConflictError,
     KnowledgeCardNotFoundError,
+    KnowledgePersistenceError,
     KnowledgeService,
 )
 
@@ -58,6 +59,11 @@ def create_card(
                 "con questo codice."
             ),
         ) from exc
+    except KnowledgePersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Impossibile salvare la Knowledge Card.",
+        ) from exc
 
 
 @router.get(
@@ -97,6 +103,11 @@ def update_card(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Knowledge Card non trovata.",
         ) from exc
+    except KnowledgePersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Impossibile aggiornare la Knowledge Card.",
+        ) from exc
 
 
 @router.delete(
@@ -115,4 +126,9 @@ def delete_card(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Knowledge Card non trovata.",
+        ) from exc
+    except KnowledgePersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Impossibile eliminare la Knowledge Card.",
         ) from exc

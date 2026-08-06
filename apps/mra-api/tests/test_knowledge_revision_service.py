@@ -15,6 +15,12 @@ class FakeKnowledgeRepository:
         self.card = card
         return card
 
+    def commit(self):
+        pass
+
+    def rollback(self):
+        pass
+
 
 class FakeRevisionRepository:
     def __init__(self) -> None:

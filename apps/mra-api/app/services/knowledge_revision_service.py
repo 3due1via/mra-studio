@@ -2,6 +2,8 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+
 from app.models import KnowledgeCard, KnowledgeRevision
 from app.repositories.knowledge_repository import KnowledgeRepositoryProtocol
 from app.repositories.knowledge_revision_repository import (
@@ -10,6 +12,10 @@ from app.repositories.knowledge_revision_repository import (
 
 
 class KnowledgeRevisionNotFoundError(Exception):
+    pass
+
+
+class KnowledgeRevisionPersistenceError(Exception):
     pass
 
 
@@ -69,13 +75,21 @@ class KnowledgeRevisionService:
             if field in revision.snapshot:
                 setattr(card, field, revision.snapshot[field])
 
-        restored = self.knowledge_repository.save(card)
-        self.record(
-            restored,
-            action="restore",
-            note=f"Ripristinata revisione #{revision.revision_number}",
-        )
-        return restored
+        try:
+            restored = self.knowledge_repository.save(card)
+            self.record(
+                restored,
+                action="restore",
+                note=f"Ripristinata revisione #{revision.revision_number}",
+            )
+            self.knowledge_repository.commit()
+            return restored
+        except IntegrityError as exc:
+            self.knowledge_repository.rollback()
+            raise KnowledgeRevisionPersistenceError from exc
+        except Exception:
+            self.knowledge_repository.rollback()
+            raise
 
     @classmethod
     def snapshot(cls, card: KnowledgeCard) -> dict[str, Any]:

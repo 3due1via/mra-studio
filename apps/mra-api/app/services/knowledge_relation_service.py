@@ -1,5 +1,7 @@
 import uuid
 
+from sqlalchemy.exc import IntegrityError
+
 from app.models import KnowledgeRelation
 from app.repositories.knowledge_relation_repository import (
     SqlAlchemyKnowledgeRelationRepository,
@@ -17,6 +19,10 @@ class KnowledgeRelationConflictError(Exception):
 
 
 class KnowledgeRelationInvalidError(Exception):
+    pass
+
+
+class KnowledgeRelationPersistenceError(Exception):
     pass
 
 
@@ -66,14 +72,22 @@ class KnowledgeRelationService:
         ):
             raise KnowledgeRelationConflictError
 
-        relation = self.relation_repository.add(
-            KnowledgeRelation(
-                source_id=source_id,
-                target_id=payload.target_id,
-                relation_type=payload.relation_type,
-                note=payload.note.strip(),
+        try:
+            relation = self.relation_repository.add(
+                KnowledgeRelation(
+                    source_id=source_id,
+                    target_id=payload.target_id,
+                    relation_type=payload.relation_type,
+                    note=payload.note.strip(),
+                )
             )
-        )
+            self.relation_repository.commit()
+        except IntegrityError as exc:
+            self.relation_repository.rollback()
+            raise KnowledgeRelationConflictError from exc
+        except Exception:
+            self.relation_repository.rollback()
+            raise
         return KnowledgeRelationRead(
             id=relation.id,
             source_id=relation.source_id,
@@ -92,4 +106,12 @@ class KnowledgeRelationService:
         relation = self.relation_repository.get(relation_id)
         if relation is None or relation.source_id != source_id:
             raise KnowledgeRelationNotFoundError
-        self.relation_repository.delete(relation)
+        try:
+            self.relation_repository.delete(relation)
+            self.relation_repository.commit()
+        except IntegrityError as exc:
+            self.relation_repository.rollback()
+            raise KnowledgeRelationPersistenceError from exc
+        except Exception:
+            self.relation_repository.rollback()
+            raise

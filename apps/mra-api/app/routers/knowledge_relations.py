@@ -8,6 +8,7 @@ from app.services.knowledge_relation_service import (
     KnowledgeRelationConflictError,
     KnowledgeRelationInvalidError,
     KnowledgeRelationNotFoundError,
+    KnowledgeRelationPersistenceError,
     KnowledgeRelationService,
 )
 
@@ -52,6 +53,11 @@ def create_relation(
             status_code=409,
             detail="Questa relazione esiste già.",
         ) from exc
+    except KnowledgeRelationPersistenceError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Impossibile salvare la relazione.",
+        ) from exc
 
 
 @router.delete("/{relation_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -64,3 +70,8 @@ def delete_relation(
         service.delete_relation(source_id, relation_id)
     except KnowledgeRelationNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Relazione non trovata.") from exc
+    except KnowledgeRelationPersistenceError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Impossibile eliminare la relazione.",
+        ) from exc
