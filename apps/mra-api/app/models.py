@@ -99,3 +99,83 @@ class KnowledgeRevision(Base):
     )
 
     card: Mapped[KnowledgeCard] = relationship(foreign_keys=[card_id])
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    name: Mapped[str] = mapped_column(String(255), index=True)
+    project_type: Mapped[str] = mapped_column(String(80), index=True)
+    customer: Mapped[str] = mapped_column(String(255), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(30), default="draft", index=True)
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    environments: Mapped[list["Environment"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+
+
+class Environment(Base):
+    __tablename__ = "environments"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), index=True)
+    environment_type: Mapped[str] = mapped_column(String(80), index=True)
+    area_m2: Mapped[str] = mapped_column(String(30), default="")
+    height_m: Mapped[str] = mapped_column(String(30), default="")
+    width_m: Mapped[str] = mapped_column(String(30), default="")
+    length_m: Mapped[str] = mapped_column(String(30), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    project: Mapped[Project] = relationship(back_populates="environments")
+    objects: Mapped[list["MraObject"]] = relationship(
+        back_populates="environment", cascade="all, delete-orphan"
+    )
+
+
+class MraObject(Base):
+    __tablename__ = "mra_objects"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    environment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("environments.id", ondelete="CASCADE"), index=True
+    )
+    category: Mapped[str] = mapped_column(String(120), index=True)
+    name: Mapped[str] = mapped_column(String(255), index=True)
+    brand: Mapped[str] = mapped_column(String(120), default="")
+    model: Mapped[str] = mapped_column(String(120), default="")
+    serial_number: Mapped[str] = mapped_column(String(120), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(30), default="active", index=True)
+    metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    environment: Mapped[Environment] = relationship(back_populates="objects")

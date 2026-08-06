@@ -10,7 +10,9 @@ import { KnowledgeProcedureSection } from "./KnowledgeProcedureSection";
 import { KnowledgeRelationsSection } from "./KnowledgeRelationsSection";
 import { KnowledgeRevisionsSection } from "./KnowledgeRevisionsSection";
 import { KnowledgeQualityPanel } from "./KnowledgeQualityPanel";
-import { KnowledgeTabs, type KnowledgeTab } from "./KnowledgeTabs";
+import type { KnowledgeTab } from "./KnowledgeTabs";
+import { KnowledgeSectionNav } from "./KnowledgeSectionNav";
+import { KnowledgeInspectorPanel } from "./KnowledgeInspectorPanel";
 import { KnowledgeWorkflowBar } from "./KnowledgeWorkflowBar";
 import { calculateQuality } from "./knowledgeQuality";
 
@@ -96,10 +98,23 @@ export function KnowledgeEditor({ card, onCancel, onSave, onRestored }: Props) {
         onCancel={onCancel}
       />
 
-      <KnowledgeTabs activeTab={activeTab} onChange={setActiveTab} />
+      <div className="knowledge-pro-workspace">
+        <KnowledgeSectionNav
+          activeSection={activeTab}
+          onChange={setActiveTab}
+          hasSavedCard={Boolean(card)}
+        />
 
-      <div className="knowledge-editor-layout">
-        <div className="knowledge-editor-body knowledge-editor-tab-panel">
+        <main className="knowledge-pro-main">
+          <div className="knowledge-pro-section-header">
+            <div>
+              <p className="eyebrow">AREA DI LAVORO</p>
+              <h3>{activeTab === "general" ? "Dati generali" : activeTab === "description" ? "Descrizione tecnica" : activeTab === "diagnosis" ? "Diagnosi" : activeTab === "procedure" ? "Procedura operativa" : activeTab === "relations" ? "Collegamenti" : "Storico modifiche"}</h3>
+            </div>
+            <span className="knowledge-pro-focus-badge">Modalità concentrata</span>
+          </div>
+
+          <div className="knowledge-editor-body knowledge-editor-tab-panel">
           {activeTab === "general" ? (
             <KnowledgeGeneralSection register={register} isEditing={Boolean(card)} />
           ) : null}
@@ -123,9 +138,14 @@ export function KnowledgeEditor({ card, onCancel, onSave, onRestored }: Props) {
           {activeTab === "revisions" ? (
             <KnowledgeRevisionsSection card={card} onRestored={onRestored} />
           ) : null}
-        </div>
+          </div>
+        </main>
 
-        <KnowledgeQualityPanel values={values} isDirty={formState.isDirty} />
+        <KnowledgeInspectorPanel
+          values={values}
+          isDirty={formState.isDirty}
+          isEditing={Boolean(card)}
+        />
       </div>
 
       <KnowledgeWorkflowBar

@@ -1,4 +1,8 @@
 import type { ButtonHTMLAttributes } from "react";
+import { MraButton } from "../ui";
+
 export function Button(props: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button {...props} className={`button ${props.className ?? ""}`.trim()} />;
+  const legacyClass = props.className ?? "";
+  const tone = legacyClass.includes("danger") ? "danger" : legacyClass.includes("secondary") ? "secondary" : "primary";
+  return <MraButton {...props} tone={tone} />;
 }

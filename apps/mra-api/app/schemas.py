@@ -106,3 +106,80 @@ class KnowledgeRevisionRead(BaseModel):
     note: str
     snapshot: dict[str, str]
     created_at: datetime
+
+
+ProjectStatus = Literal["draft", "active", "paused", "completed", "archived"]
+
+
+class ProjectBase(BaseModel):
+    name: str = Field(min_length=2, max_length=255)
+    project_type: str = Field(min_length=2, max_length=80)
+    customer: str = Field(default="", max_length=255)
+    description: str = ""
+    status: ProjectStatus = "draft"
+    progress: int = Field(default=0, ge=0, le=100)
+
+
+class ProjectCreate(ProjectBase):
+    pass
+
+
+class ProjectUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=255)
+    project_type: str | None = Field(default=None, min_length=2, max_length=80)
+    customer: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    status: ProjectStatus | None = None
+    progress: int | None = Field(default=None, ge=0, le=100)
+
+
+class ProjectRead(ProjectBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class EnvironmentBase(BaseModel):
+    name: str = Field(min_length=2, max_length=255)
+    environment_type: str = Field(min_length=2, max_length=80)
+    area_m2: str = Field(default="", max_length=30)
+    height_m: str = Field(default="", max_length=30)
+    width_m: str = Field(default="", max_length=30)
+    length_m: str = Field(default="", max_length=30)
+    notes: str = ""
+
+
+class EnvironmentCreate(EnvironmentBase):
+    pass
+
+
+class EnvironmentRead(EnvironmentBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    project_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class MraObjectBase(BaseModel):
+    category: str = Field(min_length=2, max_length=120)
+    name: str = Field(min_length=2, max_length=255)
+    brand: str = Field(default="", max_length=120)
+    model: str = Field(default="", max_length=120)
+    serial_number: str = Field(default="", max_length=120)
+    description: str = ""
+    status: str = Field(default="active", max_length=30)
+    metadata_json: dict = Field(default_factory=dict)
+
+
+class MraObjectCreate(MraObjectBase):
+    pass
+
+
+class MraObjectRead(MraObjectBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    environment_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
