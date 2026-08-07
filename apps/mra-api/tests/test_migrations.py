@@ -21,6 +21,8 @@ from scripts.baseline_existing_db import (
 )
 
 EXPECTED_TABLES = {
+    "users",
+    "auth_sessions",
     "knowledge_cards",
     "knowledge_relations",
     "knowledge_revisions",
@@ -28,6 +30,7 @@ EXPECTED_TABLES = {
     "environments",
     "mra_objects",
 }
+HEAD_REVISION = "20260807_0002"
 
 
 def test_00_alembic_upgrades_empty_database(integration_client):
@@ -36,7 +39,12 @@ def test_00_alembic_upgrades_empty_database(integration_client):
         connection.exec_driver_sql("DROP SCHEMA public CASCADE")
         connection.exec_driver_sql("CREATE SCHEMA public")
 
-    command.upgrade(Config("alembic.ini"), "head")
+    config = Config("alembic.ini")
+    command.upgrade(config, BASELINE_REVISION)
+    baseline_tables = set(sa.inspect(engine).get_table_names())
+    assert "users" not in baseline_tables
+    assert "auth_sessions" not in baseline_tables
+    command.upgrade(config, "head")
 
     inspector = sa.inspect(engine)
     assert EXPECTED_TABLES <= set(inspector.get_table_names())
@@ -49,7 +57,7 @@ def test_alembic_created_expected_schema(integration_client):
     with engine.connect() as connection:
         assert connection.scalar(
             sa.text("SELECT version_num FROM alembic_version")
-        ) == BASELINE_REVISION
+        ) == HEAD_REVISION
         validate_existing_schema(connection)
 
     health = integration_client.get("/health")
@@ -64,31 +72,39 @@ def test_alembic_created_expected_schema(integration_client):
 
 
 def test_compatible_schema_is_accepted(integration_client):
-    baseline_existing_database(engine, stamp=False)
+    with engine.connect() as connection:
+        validate_existing_schema(connection)
 
 
-def test_compatible_unversioned_schema_can_be_stamped(integration_client):
+def test_current_head_is_not_misstamped_as_historical_baseline(integration_client):
+    with pytest.raises(SchemaDriftError, match="unexpected tables"):
+        baseline_existing_database(engine, stamp=True)
+
+
+def test_legacy_baseline_stamp_then_upgrade_preserves_data(integration_client):
+    engine.dispose()
     with engine.begin() as connection:
+        connection.exec_driver_sql("DROP SCHEMA public CASCADE")
+        connection.exec_driver_sql("CREATE SCHEMA public")
+    config = Config("alembic.ini")
+    command.upgrade(config, BASELINE_REVISION)
+    sentinel_id = "00000000-0000-0000-0000-000000000003"
+    with engine.begin() as connection:
+        connection.execute(
+            sa.text(
+                "INSERT INTO projects (id, name, project_type, customer, description, status, progress) "
+                "VALUES (:id, 'Legacy sentinel', 'Test', '', '', 'draft', 0)"
+            ),
+            {"id": sentinel_id},
+        )
         connection.execute(sa.text("DELETE FROM alembic_version"))
 
-    try:
-        baseline_existing_database(engine, stamp=True)
-        with engine.connect() as connection:
-            assert connection.scalar(
-                sa.text("SELECT version_num FROM alembic_version")
-            ) == BASELINE_REVISION
-    finally:
-        with engine.begin() as connection:
-            current = connection.scalar(
-                sa.text("SELECT version_num FROM alembic_version")
-            )
-            if current is None:
-                connection.execute(
-                    sa.text(
-                        "INSERT INTO alembic_version (version_num) VALUES (:revision)"
-                    ),
-                    {"revision": BASELINE_REVISION},
-                )
+    baseline_existing_database(engine, stamp=True)
+    command.upgrade(config, "head")
+    with engine.connect() as connection:
+        assert connection.scalar(sa.text("SELECT version_num FROM alembic_version")) == HEAD_REVISION
+        assert connection.scalar(sa.text("SELECT name FROM projects WHERE id = :id"), {"id": sentinel_id}) == "Legacy sentinel"
+        validate_existing_schema(connection)
 
 
 def test_schema_drift_is_rejected(integration_client):
@@ -112,7 +128,7 @@ def test_initial_downgrade_is_non_destructive(integration_client):
         session.commit()
 
     config = Config("alembic.ini")
-    with pytest.raises(RuntimeError, match="intentionally irreversible"):
+    with pytest.raises(RuntimeError, match="intentionally non-destructive"):
         command.downgrade(config, "base")
 
     inspector = sa.inspect(engine)

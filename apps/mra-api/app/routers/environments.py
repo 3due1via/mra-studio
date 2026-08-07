@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.dependencies import get_workspace_service
+from app.dependencies import get_workspace_service, require_admin, require_csrf, require_editor, require_viewer
 from app.schemas import EnvironmentCreate, EnvironmentRead, EnvironmentUpdate
 from app.services.workspace_service import (
     EnvironmentNotFoundError,
@@ -11,7 +11,7 @@ from app.services.workspace_service import (
     WorkspaceService,
 )
 
-router = APIRouter(prefix="/api/v1", tags=["environments"])
+router = APIRouter(prefix="/api/v1", tags=["environments"], dependencies=[Depends(require_viewer)])
 
 
 def _not_found(detail: str) -> HTTPException:
@@ -40,6 +40,7 @@ def list_environments(
     "/projects/{project_id}/environments",
     response_model=EnvironmentRead,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_editor), Depends(require_csrf)],
 )
 def create_environment(
     project_id: uuid.UUID,
@@ -65,7 +66,7 @@ def get_environment(
         raise _not_found("Ambiente non trovato.") from exc
 
 
-@router.put("/environments/{environment_id}", response_model=EnvironmentRead)
+@router.put("/environments/{environment_id}", response_model=EnvironmentRead, dependencies=[Depends(require_editor), Depends(require_csrf)])
 def update_environment(
     environment_id: uuid.UUID,
     payload: EnvironmentUpdate,
@@ -79,7 +80,7 @@ def update_environment(
         raise _persistence_error() from exc
 
 
-@router.delete("/environments/{environment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/environments/{environment_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin), Depends(require_csrf)])
 def delete_environment(
     environment_id: uuid.UUID,
     service: WorkspaceService = Depends(get_workspace_service),

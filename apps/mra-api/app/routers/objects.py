@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.dependencies import get_workspace_service
+from app.dependencies import get_workspace_service, require_admin, require_csrf, require_editor, require_viewer
 from app.schemas import MraObjectCreate, MraObjectRead, MraObjectUpdate
 from app.services.workspace_service import (
     EnvironmentNotFoundError,
@@ -11,7 +11,7 @@ from app.services.workspace_service import (
     WorkspaceService,
 )
 
-router = APIRouter(prefix="/api/v1", tags=["objects"])
+router = APIRouter(prefix="/api/v1", tags=["objects"], dependencies=[Depends(require_viewer)])
 
 
 def _not_found(detail: str) -> HTTPException:
@@ -40,6 +40,7 @@ def list_objects(
     "/environments/{environment_id}/objects",
     response_model=MraObjectRead,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_editor), Depends(require_csrf)],
 )
 def create_object(
     environment_id: uuid.UUID,
@@ -65,7 +66,7 @@ def get_object(
         raise _not_found("Oggetto non trovato.") from exc
 
 
-@router.put("/objects/{object_id}", response_model=MraObjectRead)
+@router.put("/objects/{object_id}", response_model=MraObjectRead, dependencies=[Depends(require_editor), Depends(require_csrf)])
 def update_object(
     object_id: uuid.UUID,
     payload: MraObjectUpdate,
@@ -79,7 +80,7 @@ def update_object(
         raise _persistence_error() from exc
 
 
-@router.delete("/objects/{object_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/objects/{object_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin), Depends(require_csrf)])
 def delete_object(
     object_id: uuid.UUID,
     service: WorkspaceService = Depends(get_workspace_service),

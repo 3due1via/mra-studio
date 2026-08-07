@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 type Item = { label: string; path: string; icon: string; badge?: string };
 type Group = { title: string; items: Item[] };
@@ -47,6 +48,7 @@ const groups: Group[] = [
 ];
 
 export function Sidebar() {
+  const { user } = useAuth();
   return (
     <aside className="sidebar mra-sidebar">
       <div className="mra-logo-lockup">
@@ -57,7 +59,7 @@ export function Sidebar() {
         {groups.map((group) => (
           <section className="nav-group" key={group.title}>
             <p>{group.title}</p>
-            {group.items.map((item) => (
+            {group.items.filter((item) => item.path !== "/users" || user?.role === "admin").map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}

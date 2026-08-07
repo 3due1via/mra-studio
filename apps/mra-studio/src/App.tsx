@@ -8,11 +8,15 @@ import { ReadyToWorkPage } from "./pages/ReadyToWorkPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage";
+import { AdminRoute, ProtectedRoute } from "./auth/ProtectedRoute";
+import { LoginPage } from "./pages/LoginPage";
+import { UsersPage } from "./pages/UsersPage";
 
 export default function App() {
   return (
     <Routes>
-      <Route element={<AppShell />}>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedRoute />}><Route element={<AppShell />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
@@ -39,10 +43,12 @@ export default function App() {
         <Route path="/partners" element={<ModulePage title="Partners" />} />
         <Route path="/laboratory" element={<ModulePage title="Laboratory" />} />
         <Route path="/analytics" element={<ModulePage title="Analytics" />} />
-        <Route path="/users" element={<ModulePage title="Users" />} />
+        <Route element={<AdminRoute />}><Route path="/users" element={<UsersPage />} /></Route>
+        <Route path="/forbidden" element={<ModulePage title="Accesso non consentito" />} />
         <Route path="/settings" element={<ModulePage title="Settings" />} />
         <Route path="/design-system" element={<DesignSystemPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Route>
       </Route>
     </Routes>
   );

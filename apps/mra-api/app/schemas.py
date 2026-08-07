@@ -23,6 +23,99 @@ KnowledgeRelationType = Literal[
     "references",
 ]
 
+AuthRole = Literal["admin", "editor", "viewer"]
+PASSWORD_MIN_LENGTH = 12
+PASSWORD_MAX_LENGTH = 1024
+DISPLAY_NAME_MIN_LENGTH = 2
+DISPLAY_NAME_MAX_LENGTH = 120
+
+
+def normalize_email_value(value: str) -> str:
+    value = value.strip().lower()
+    if "@" not in value or value.startswith("@") or value.endswith("@"):
+        raise ValueError("Email non valida.")
+    local, domain = value.rsplit("@", 1)
+    if not local or "." not in domain or domain.startswith(".") or domain.endswith("."):
+        raise ValueError("Email non valida.")
+    return value
+
+
+def normalize_display_name_value(value: str) -> str:
+    value = value.strip()
+    if not DISPLAY_NAME_MIN_LENGTH <= len(value) <= DISPLAY_NAME_MAX_LENGTH:
+        raise ValueError("Nome visualizzato non valido.")
+    return value
+
+
+def validate_password_value(value: str) -> str:
+    if not PASSWORD_MIN_LENGTH <= len(value) <= PASSWORD_MAX_LENGTH:
+        raise ValueError("Password non valida.")
+    return value
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=1, max_length=PASSWORD_MAX_LENGTH)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return normalize_email_value(value)
+
+
+class UserCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    display_name: str = Field(min_length=DISPLAY_NAME_MIN_LENGTH, max_length=DISPLAY_NAME_MAX_LENGTH)
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+    role: AuthRole = "viewer"
+    must_change_password: bool = True
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return normalize_email_value(value)
+
+    @field_validator("display_name")
+    @classmethod
+    def normalize_display_name(cls, value: str) -> str:
+        return normalize_display_name_value(value)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_value(value)
+
+
+class UserUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=DISPLAY_NAME_MIN_LENGTH, max_length=DISPLAY_NAME_MAX_LENGTH)
+    role: AuthRole | None = None
+    is_active: bool | None = None
+    must_change_password: bool | None = None
+    password: str | None = Field(default=None, min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
+
+    @field_validator("display_name")
+    @classmethod
+    def normalize_optional_display_name(cls, value: str | None) -> str | None:
+        return normalize_display_name_value(value) if value is not None else None
+
+
+class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    display_name: str
+    role: AuthRole
+    is_active: bool
+    must_change_password: bool
+    last_login_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AuthResponse(BaseModel):
+    user: UserRead
+
 
 class KnowledgeCardBase(BaseModel):
     code: str = Field(min_length=3, max_length=64)

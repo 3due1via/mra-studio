@@ -72,6 +72,8 @@ docker compose run --rm api python -m scripts.baseline_existing_db --stamp
 
 Con `--stamp` viene scritto esclusivamente il marker Alembic `20260806_0001`; le tabelle applicative e i dati non vengono modificati.
 
+Applica quindi le migrazioni incrementali con `alembic upgrade head`.
+
 ### Downgrade baseline
 
 La migrazione iniziale è intenzionalmente irreversibile. `alembic downgrade base` fallisce senza eliminare tabelle o dati. Per ricostruire un ambiente di sviluppo usa un database vuoto; per database importanti usa esclusivamente procedure di ripristino da backup verificate.
@@ -113,7 +115,25 @@ Le API principali sono:
 - `/api/v1/projects/{project_id}/environments` e `/api/v1/environments/{environment_id}`;
 - `/api/v1/environments/{environment_id}/objects` e `/api/v1/objects/{object_id}`.
 
-I router delegano la logica a service e repository; lo schema continua a essere gestito esclusivamente dalla baseline Alembic esistente.
+I router delegano la logica a service e repository; lo schema è gestito dalla baseline e dalle migrazioni Alembic incrementali.
+
+## Autenticazione e ruoli
+
+L'accesso usa sessioni opache persistenti in PostgreSQL. Il browser riceve un cookie di sessione `HttpOnly`; il synchronizer token CSRF associato alla sessione è consegnato esclusivamente tramite il cookie leggibile `mra_csrf`, conservato nel database solo come hash e copiato dal client nell'header `X-CSRF-Token`. Le mutazioni richiedono anche Origin/Referer autorizzato e Fetch Metadata compatibile. Nessun token viene salvato in `localStorage` o `sessionStorage`. In produzione sono obbligatori HTTPS, `SESSION_COOKIE_SECURE=true`, `SESSION_COOKIE_NAME=__Host-mra_session` e liste CORS/auth identiche. Configurazioni production insicure vengono rifiutate all'avvio.
+
+I ruoli sono:
+
+- `admin`: gestione utenti, lettura, scrittura ed eliminazione;
+- `editor`: lettura, creazione e modifica;
+- `viewer`: sola lettura.
+
+Dopo `alembic upgrade head`, crea il primo amministratore in modo interattivo; la password non è accettata come argomento o variabile ambiente e non viene scritta nel repository:
+
+```bash
+docker compose run --rm api python -m scripts.bootstrap_admin
+```
+
+Gli endpoint auth sono `/api/v1/auth/login`, `/api/v1/auth/me` e `/api/v1/auth/logout`; la gestione utenti amministrativa è disponibile sotto `/api/v1/users`.
 
 ## Struttura monorepo
 

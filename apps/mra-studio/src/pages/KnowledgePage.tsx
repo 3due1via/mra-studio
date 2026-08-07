@@ -10,8 +10,10 @@ import {
   updateKnowledgeCard,
 } from "../services/knowledgeApi";
 import type { KnowledgeCard, KnowledgeCardInput } from "../types/knowledge";
+import { useAuth } from "../auth/AuthContext";
 
 export function KnowledgePage() {
+  const { user } = useAuth(); const canEdit = user?.role !== "viewer"; const canDelete = user?.role === "admin";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [editing, setEditing] = useState<KnowledgeCard | null | undefined>();
@@ -70,7 +72,7 @@ export function KnowledgePage() {
         eyebrow="KNOWLEDGE ENGINE"
         title="Knowledge"
         description="Crea, modifica, cerca ed elimina Knowledge Card salvate realmente in PostgreSQL."
-        actions={<Button onClick={() => { setMessage(""); setEditing(null); }}>+ Nuova Knowledge Card</Button>}
+        actions={canEdit ? <Button onClick={() => { setMessage(""); setEditing(null); }}>+ Nuova Knowledge Card</Button> : null}
       />
 
       {message ? <div className="notice success">{message}</div> : null}
@@ -102,7 +104,7 @@ export function KnowledgePage() {
         <section className="empty-state">
           <h2>Nessuna Knowledge Card</h2>
           <p>Crea la prima scheda e salvala nel database PostgreSQL.</p>
-          <Button onClick={() => setEditing(null)}>Crea Knowledge Card</Button>
+          {canEdit && <Button onClick={() => setEditing(null)}>Crea Knowledge Card</Button>}
         </section>
       ) : null}
 
@@ -123,10 +125,10 @@ export function KnowledgePage() {
                   <td><span className={`status-badge status-${card.status}`}>{card.status}</span></td>
                   <td>{card.version}</td>
                   <td className="row-actions">
-                    <Button className="button-secondary" onClick={() => setEditing(card)}>Modifica</Button>
-                    <Button className="button-danger" disabled={remove.isPending} onClick={() => {
+                    {canEdit && <Button className="button-secondary" onClick={() => setEditing(card)}>Modifica</Button>}
+                    {canDelete && <Button className="button-danger" disabled={remove.isPending} onClick={() => {
                       if (window.confirm(`Eliminare ${card.code}?`)) remove.mutate(card.id);
-                    }}>Elimina</Button>
+                    }}>Elimina</Button>}
                   </td>
                 </tr>
               ))}

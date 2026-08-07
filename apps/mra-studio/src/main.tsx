@@ -7,6 +7,7 @@ import "./styles.css";
 import "./build003.css";
 import "./ke002.css";
 import "./ui/design-system.css";
+import { AuthProvider } from "./auth/AuthContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,7 +20,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <AuthProvider><App /></AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>,

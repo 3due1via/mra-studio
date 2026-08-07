@@ -4,10 +4,12 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "../components/Button";
 import { createEnvironment, deleteEnvironment, getProject, listEnvironments, updateEnvironment } from "../services/projectsApi";
 import type { Environment, EnvironmentInput } from "../types/projects";
+import { useAuth } from "../auth/AuthContext";
 
 const emptyEnvironment: EnvironmentInput = { name: "", environment_type: "Stanza", area_m2: "", height_m: "", width_m: "", length_m: "", notes: "" };
 
 export function ProjectDetailPage() {
+  const { user } = useAuth(); const canEdit = user?.role !== "viewer"; const canDelete = user?.role === "admin";
   const { projectId = "" } = useParams();
   const client = useQueryClient();
   const [form, setForm] = useState<EnvironmentInput>(emptyEnvironment);
@@ -31,7 +33,7 @@ export function ProjectDetailPage() {
 
   return <>
     <header className="project-hq-hero"><div className="project-hq-copy"><Link to="/projects">← I miei progetti</Link><span className="project-hq-kicker">WORKSPACE PROGETTO</span><h1>{project.data?.name}</h1><p>{project.data?.description || "Nessuna descrizione inserita."}</p><div className="project-hq-tags"><b>{project.data?.project_type}</b><b>{project.data?.status}</b><b>{project.data?.customer || "Progetto personale"}</b></div></div><div className="project-readiness-ring"><div><strong>{project.data?.progress ?? 0}%</strong><span>Avanzamento</span></div></div></header>
-    <section className="project-hq-actions"><Button onClick={() => { setForm(emptyEnvironment); setEditingId(null); setShowForm(true); }}>+ Aggiungi ambiente</Button></section>
+    {canEdit && <section className="project-hq-actions"><Button onClick={() => { setForm(emptyEnvironment); setEditingId(null); setShowForm(true); }}>+ Aggiungi ambiente</Button></section>}
     {showForm ? <form className="inline-entity-form" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}><h2>{editingId ? "Modifica ambiente" : "Nuovo ambiente"}</h2><div className="project-form-grid">
       <label><span>Nome</span><input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
       <label><span>Tipo</span><input required minLength={2} value={form.environment_type} onChange={(e) => setForm({ ...form, environment_type: e.target.value })} /></label>
@@ -46,6 +48,6 @@ export function ProjectDetailPage() {
     {environments.isError ? <section className="empty-state error-box"><h2>Errore ambienti</h2><p>{String(environments.error)}</p></section> : null}
     {remove.isError ? <section className="empty-state error-box"><h2>Eliminazione non riuscita</h2><p>{String(remove.error)}</p></section> : null}
     {!environments.isLoading && !environments.isError && environments.data?.length === 0 ? <section className="empty-state"><h2>Il progetto è ancora vuoto</h2><p>Aggiungi il primo ambiente.</p></section> : null}
-    <section className="environment-list">{(environments.data ?? []).map((environment) => <article className="environment-card" key={environment.id}><header><div><span>{environment.environment_type}</span><h2>{environment.name}</h2><p>{environment.area_m2 ? `${environment.area_m2} m²` : "Misure non inserite"}</p></div></header><div className="project-card-actions"><Link className="button" to={`/environments/${environment.id}`}>Apri ambiente</Link><button type="button" onClick={() => edit(environment)}>Modifica</button><button type="button" onClick={() => { if (window.confirm(`Eliminare ${environment.name} e tutti gli oggetti?`)) remove.mutate(environment.id); }}>Elimina</button></div></article>)}</section>
+    <section className="environment-list">{(environments.data ?? []).map((environment) => <article className="environment-card" key={environment.id}><header><div><span>{environment.environment_type}</span><h2>{environment.name}</h2><p>{environment.area_m2 ? `${environment.area_m2} m²` : "Misure non inserite"}</p></div></header><div className="project-card-actions"><Link className="button" to={`/environments/${environment.id}`}>Apri ambiente</Link>{canEdit && <button type="button" onClick={() => edit(environment)}>Modifica</button>}{canDelete && <button type="button" onClick={() => { if (window.confirm(`Eliminare ${environment.name} e tutti gli oggetti?`)) remove.mutate(environment.id); }}>Elimina</button>}</div></article>)}</section>
   </>;
 }

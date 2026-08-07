@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.dependencies import get_knowledge_relation_service
+from app.dependencies import get_knowledge_relation_service, require_admin, require_csrf, require_editor, require_viewer
 from app.schemas import KnowledgeRelationCreate, KnowledgeRelationRead
 from app.services.knowledge_relation_service import (
     KnowledgeRelationConflictError,
@@ -15,6 +15,7 @@ from app.services.knowledge_relation_service import (
 router = APIRouter(
     prefix="/api/v1/knowledge-cards/{source_id}/relations",
     tags=["knowledge-relations"],
+    dependencies=[Depends(require_viewer)],
 )
 
 
@@ -33,6 +34,7 @@ def list_relations(
     "",
     response_model=KnowledgeRelationRead,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_editor), Depends(require_csrf)],
 )
 def create_relation(
     source_id: uuid.UUID,
@@ -60,7 +62,7 @@ def create_relation(
         ) from exc
 
 
-@router.delete("/{relation_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{relation_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin), Depends(require_csrf)])
 def delete_relation(
     source_id: uuid.UUID,
     relation_id: uuid.UUID,

@@ -23,6 +23,10 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://mra:mra_dev_password@postgres:5432/mra}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      AUTH_ALLOWED_ORIGINS: ${AUTH_ALLOWED_ORIGINS:-http://localhost:5173}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-mra_session}
+      SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE:-lax}
     ports:
       - "8000:8000"
     volumes:

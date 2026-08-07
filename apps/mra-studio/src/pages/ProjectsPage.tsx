@@ -5,10 +5,12 @@ import { Button } from "../components/Button";
 import { PageHeader } from "../components/PageHeader";
 import { createProject, deleteProject, listProjects, updateProject } from "../services/projectsApi";
 import type { Project, ProjectInput } from "../types/projects";
+import { useAuth } from "../auth/AuthContext";
 
 const emptyProject: ProjectInput = { name: "", project_type: "Casa", customer: "", description: "", status: "draft", progress: 0 };
 
 export function ProjectsPage() {
+  const { user } = useAuth(); const canEdit = user?.role !== "viewer"; const canDelete = user?.role === "admin";
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<ProjectInput>(emptyProject);
@@ -35,7 +37,7 @@ export function ProjectsPage() {
   };
 
   return <>
-    <PageHeader eyebrow="AREA DI LAVORO" title="I miei progetti" description="Organizza ambienti e oggetti tecnici in un unico workspace." actions={<Button onClick={() => { setForm(emptyProject); setEditingId(null); setShowForm(true); }}>+ Nuovo progetto</Button>} />
+    <PageHeader eyebrow="AREA DI LAVORO" title="I miei progetti" description="Organizza ambienti e oggetti tecnici in un unico workspace." actions={canEdit ? <Button onClick={() => { setForm(emptyProject); setEditingId(null); setShowForm(true); }}>+ Nuovo progetto</Button> : null} />
     {showForm ? <form className="project-create-card" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
       <div className="project-form-heading"><div><span>{editingId ? "MODIFICA PROGETTO" : "NUOVO PROGETTO"}</span><h2>Dati principali</h2></div><button type="button" onClick={() => setShowForm(false)}>×</button></div>
       <div className="project-form-grid">
@@ -57,7 +59,7 @@ export function ProjectsPage() {
     <section className="project-card-grid">{visible.map((project) => <article className="project-card" key={project.id}>
       <div className="project-card-cover"><span>{project.project_type}</span><b>{project.status}</b></div>
       <div className="project-card-content"><h2>{project.name}</h2><p>{project.description || "Nessuna descrizione."}</p><div className="project-meta"><span>{project.customer || "Progetto personale"}</span><span>{project.progress}%</span></div><div className="project-progress"><i style={{ width: `${project.progress}%` }} /></div>
-        <div className="project-card-actions"><Link className="button" to={`/projects/${project.id}`}>Apri</Link><button type="button" onClick={() => edit(project)}>Modifica</button><button type="button" onClick={() => { if (window.confirm(`Eliminare ${project.name} e tutti i contenuti?`)) remove.mutate(project.id); }}>Elimina</button></div>
+        <div className="project-card-actions"><Link className="button" to={`/projects/${project.id}`}>Apri</Link>{canEdit && <button type="button" onClick={() => edit(project)}>Modifica</button>}{canDelete && <button type="button" onClick={() => { if (window.confirm(`Eliminare ${project.name} e tutti i contenuti?`)) remove.mutate(project.id); }}>Elimina</button>}</div>
       </div></article>)}</section>
   </>;
 }

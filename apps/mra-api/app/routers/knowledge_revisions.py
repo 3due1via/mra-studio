@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.dependencies import get_knowledge_revision_service
+from app.dependencies import get_knowledge_revision_service, require_csrf, require_editor, require_viewer
 from app.schemas import KnowledgeCardRead, KnowledgeRevisionRead
 from app.services.knowledge_revision_service import (
     KnowledgeRevisionNotFoundError,
@@ -13,6 +13,7 @@ from app.services.knowledge_revision_service import (
 router = APIRouter(
     prefix="/api/v1/knowledge-cards",
     tags=["knowledge-revisions"],
+    dependencies=[Depends(require_viewer)],
 )
 
 
@@ -36,6 +37,7 @@ def list_revisions(
 @router.post(
     "/{card_id}/revisions/{revision_id}/restore",
     response_model=KnowledgeCardRead,
+    dependencies=[Depends(require_editor), Depends(require_csrf)],
 )
 def restore_revision(
     card_id: uuid.UUID,

@@ -24,6 +24,14 @@ from app.db import Base
 
 BASELINE_REVISION = "20260806_0001"
 ALEMBIC_TABLE = "alembic_version"
+BASELINE_TABLES = {
+    "knowledge_cards",
+    "knowledge_relations",
+    "knowledge_revisions",
+    "projects",
+    "environments",
+    "mra_objects",
+}
 
 
 class SchemaDriftError(RuntimeError):
@@ -196,7 +204,10 @@ def baseline_existing_database(engine: Engine, *, stamp: bool = False) -> None:
     """Validate an existing schema and optionally stamp only the Alembic marker."""
 
     with engine.connect() as connection:
-        validate_existing_schema(connection)
+        baseline_metadata = MetaData()
+        for table_name in sorted(BASELINE_TABLES):
+            Base.metadata.tables[table_name].to_metadata(baseline_metadata)
+        validate_existing_schema(connection, baseline_metadata)
         current_revision = _current_revision(connection)
 
     if current_revision not in (None, BASELINE_REVISION):

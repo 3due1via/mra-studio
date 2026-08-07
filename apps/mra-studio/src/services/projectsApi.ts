@@ -1,19 +1,5 @@
 import type { Environment, EnvironmentInput, EnvironmentUpdate, MraObject, MraObjectInput, MraObjectUpdate, Project, ProjectInput, ProjectUpdate } from "../types/projects";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null);
-    throw new Error(detail?.detail ?? `Errore API (${response.status})`);
-  }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
-}
+import { apiRequest as request } from "./apiClient";
 
 export const listProjects = () => request<Project[]>("/api/v1/projects");
 export const getProject = (id: string) => request<Project>(`/api/v1/projects/${id}`);

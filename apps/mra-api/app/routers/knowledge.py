@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.dependencies import get_knowledge_service
+from app.dependencies import get_knowledge_service, require_admin, require_csrf, require_editor, require_viewer
 from app.schemas import (
     KnowledgeCardCreate,
     KnowledgeCardRead,
@@ -18,6 +18,7 @@ from app.services.knowledge_service import (
 router = APIRouter(
     prefix="/api/v1/knowledge-cards",
     tags=["knowledge"],
+    dependencies=[Depends(require_viewer)],
 )
 
 
@@ -42,6 +43,7 @@ def list_cards(
     "",
     response_model=KnowledgeCardRead,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_editor), Depends(require_csrf)],
 )
 def create_card(
     payload: KnowledgeCardCreate,
@@ -88,6 +90,7 @@ def get_card(
 @router.put(
     "/{card_id}",
     response_model=KnowledgeCardRead,
+    dependencies=[Depends(require_editor), Depends(require_csrf)],
 )
 def update_card(
     card_id: uuid.UUID,
@@ -113,6 +116,7 @@ def update_card(
 @router.delete(
     "/{card_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin), Depends(require_csrf)],
 )
 def delete_card(
     card_id: uuid.UUID,

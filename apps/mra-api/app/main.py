@@ -12,6 +12,8 @@ from app.routers.knowledge_revisions import router as knowledge_revisions_router
 from app.routers.environments import router as environments_router
 from app.routers.objects import router as objects_router
 from app.routers.projects import router as projects_router
+from app.routers.auth import router as auth_router
+from app.routers.users import router as users_router
 
 
 app = FastAPI(
@@ -24,8 +26,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type", "X-CSRF-Token"],
 )
 
 app.include_router(knowledge_router)
@@ -34,6 +36,8 @@ app.include_router(knowledge_revisions_router)
 app.include_router(projects_router)
 app.include_router(environments_router)
 app.include_router(objects_router)
+app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.get("/", tags=["system"])

@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.dependencies import get_workspace_service
+from app.dependencies import get_workspace_service, require_admin, require_csrf, require_editor, require_viewer
 from app.schemas import ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.workspace_service import (
     ProjectNotFoundError,
@@ -10,7 +10,7 @@ from app.services.workspace_service import (
     WorkspaceService,
 )
 
-router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
+router = APIRouter(prefix="/api/v1/projects", tags=["projects"], dependencies=[Depends(require_viewer)])
 
 
 def _not_found(exc: Exception) -> HTTPException:
@@ -32,7 +32,7 @@ def list_projects(service: WorkspaceService = Depends(get_workspace_service)):
     return service.list_projects()
 
 
-@router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_editor), Depends(require_csrf)])
 def create_project(
     payload: ProjectCreate,
     service: WorkspaceService = Depends(get_workspace_service),
@@ -54,7 +54,7 @@ def get_project(
         raise _not_found(exc) from exc
 
 
-@router.put("/{project_id}", response_model=ProjectRead)
+@router.put("/{project_id}", response_model=ProjectRead, dependencies=[Depends(require_editor), Depends(require_csrf)])
 def update_project(
     project_id: uuid.UUID,
     payload: ProjectUpdate,
@@ -68,7 +68,7 @@ def update_project(
         raise _persistence_error(exc) from exc
 
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin), Depends(require_csrf)])
 def delete_project(
     project_id: uuid.UUID,
     service: WorkspaceService = Depends(get_workspace_service),

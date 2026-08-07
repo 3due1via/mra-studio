@@ -14,7 +14,7 @@ if test_database_url:
 
 
 @pytest.fixture(scope="session")
-def integration_client():
+def app_client():
     if not test_database_url:
         pytest.skip("TEST_DATABASE_URL is required for PostgreSQL integration tests")
 
@@ -25,6 +25,23 @@ def integration_client():
 
     with TestClient(app) as client:
         yield client
+
+
+@pytest.fixture
+def integration_client(app_client):
+    """Keep BUILD 001/002 integration tests authenticated as an administrator."""
+    from types import SimpleNamespace
+
+    from app.dependencies import require_admin, require_csrf, require_editor, require_viewer
+    from app.main import app
+
+    admin = SimpleNamespace(role="admin", is_active=True)
+    for dependency in (require_viewer, require_editor, require_admin):
+        app.dependency_overrides[dependency] = lambda: admin
+    app.dependency_overrides[require_csrf] = lambda: None
+    yield app_client
+    for dependency in (require_viewer, require_editor, require_admin, require_csrf):
+        app.dependency_overrides.pop(dependency, None)
 
 
 @pytest.fixture(autouse=True)
