@@ -9,6 +9,8 @@ from app.db import get_db
 from app.routers.knowledge import router as knowledge_router
 from app.routers.knowledge_relations import router as knowledge_relations_router
 from app.routers.knowledge_revisions import router as knowledge_revisions_router
+from app.routers.environments import router as environments_router
+from app.routers.objects import router as objects_router
 from app.routers.projects import router as projects_router
 
 
@@ -30,6 +32,8 @@ app.include_router(knowledge_router)
 app.include_router(knowledge_relations_router)
 app.include_router(knowledge_revisions_router)
 app.include_router(projects_router)
+app.include_router(environments_router)
+app.include_router(objects_router)
 
 
 @app.get("/", tags=["system"])

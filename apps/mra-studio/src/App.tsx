@@ -7,6 +7,7 @@ import { DesignSystemPage } from "./pages/DesignSystemPage";
 import { ReadyToWorkPage } from "./pages/ReadyToWorkPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
+import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="/environments/:environmentId" element={<EnvironmentDetailPage />} />
 
         <Route path="/categories" element={<ModulePage title="Categorie" />} />
         <Route path="/tags" element={<ModulePage title="Etichette" />} />

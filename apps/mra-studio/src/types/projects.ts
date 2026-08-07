@@ -13,6 +13,7 @@ export type Project = {
 };
 
 export type ProjectInput = Omit<Project, "id" | "created_at" | "updated_at">;
+export type ProjectUpdate = Partial<ProjectInput>;
 
 export type Environment = {
   id: string;
@@ -29,6 +30,9 @@ export type Environment = {
 };
 
 export type EnvironmentInput = Omit<Environment, "id" | "project_id" | "created_at" | "updated_at">;
+export type EnvironmentUpdate = Partial<EnvironmentInput>;
+
+export type MraObjectStatus = "active" | "maintenance" | "inactive" | "retired";
 
 export type MraObject = {
   id: string;
@@ -39,10 +43,11 @@ export type MraObject = {
   model: string;
   serial_number: string;
   description: string;
-  status: string;
+  status: MraObjectStatus;
   metadata_json: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
 
 export type MraObjectInput = Omit<MraObject, "id" | "environment_id" | "created_at" | "updated_at">;
+export type MraObjectUpdate = Partial<MraObjectInput>;

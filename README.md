@@ -103,6 +103,18 @@ pnpm build:studio
 
 La pipeline GitHub Actions esegue migrazioni, test backend con un PostgreSQL dedicato, typecheck e build frontend.
 
+## Project Workspace e Asset Registry
+
+Il primo flusso verticale applicativo gestisce la gerarchia `Project → Environment → MRA Object`. Il frontend consente creazione, consultazione, modifica ed eliminazione delle tre entità; la cancellazione di un progetto elimina tramite foreign key anche ambienti e oggetti dipendenti, mentre la cancellazione di un ambiente elimina i relativi oggetti.
+
+Le API principali sono:
+
+- `/api/v1/projects` e `/api/v1/projects/{project_id}`;
+- `/api/v1/projects/{project_id}/environments` e `/api/v1/environments/{environment_id}`;
+- `/api/v1/environments/{environment_id}/objects` e `/api/v1/objects/{object_id}`.
+
+I router delegano la logica a service e repository; lo schema continua a essere gestito esclusivamente dalla baseline Alembic esistente.
+
 ## Struttura monorepo
 
 ```text
@@ -126,8 +138,8 @@ Il workspace pnpm include `apps/*` e `packages/*`. I package condivisi sono anco
 - relazioni e revisioni Knowledge Card;
 - ripristino revisioni;
 - quality score nel frontend;
-- CRUD progetti;
-- creazione ambienti e oggetti;
+- CRUD completo Project → Environment → MRA Object;
+- workspace progetto e registro asset nel frontend;
 - PostgreSQL, migrazioni Alembic e API OpenAPI.
 
 ### Parziale

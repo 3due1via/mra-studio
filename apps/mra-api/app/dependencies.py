@@ -9,9 +9,11 @@ from app.repositories.knowledge_repository import SqlAlchemyKnowledgeRepository
 from app.repositories.knowledge_revision_repository import (
     SqlAlchemyKnowledgeRevisionRepository,
 )
+from app.repositories.workspace_repository import SqlAlchemyWorkspaceRepository
 from app.services.knowledge_relation_service import KnowledgeRelationService
 from app.services.knowledge_revision_service import KnowledgeRevisionService
 from app.services.knowledge_service import KnowledgeService
+from app.services.workspace_service import WorkspaceService
 
 
 def get_knowledge_revision_service_from_db(db: Session) -> KnowledgeRevisionService:
@@ -43,3 +45,7 @@ def get_knowledge_revision_service(
     db: Session = Depends(get_db),
 ) -> KnowledgeRevisionService:
     return get_knowledge_revision_service_from_db(db)
+
+
+def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
+    return WorkspaceService(SqlAlchemyWorkspaceRepository(db))

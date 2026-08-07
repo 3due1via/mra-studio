@@ -98,7 +98,7 @@ def test_projects_environments_and_objects(integration_client):
     assert environment.status_code == 201
 
     item = integration_client.post(
-        f"/api/v1/projects/environments/{environment.json()['id']}/objects",
+        f"/api/v1/environments/{environment.json()['id']}/objects",
         json={"category": "Utensile", "name": "Multimetro"},
     )
     assert item.status_code == 201
