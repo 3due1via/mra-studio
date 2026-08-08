@@ -9,6 +9,7 @@ from app.repositories.knowledge_repository import KnowledgeRepositoryProtocol
 from app.repositories.knowledge_revision_repository import (
     KnowledgeRevisionRepositoryProtocol,
 )
+from app.services.audit_service import AuditService, KNOWLEDGE_REVISION_RESTORED
 
 
 class KnowledgeRevisionNotFoundError(Exception):
@@ -39,9 +40,11 @@ class KnowledgeRevisionService:
         self,
         revision_repository: KnowledgeRevisionRepositoryProtocol,
         knowledge_repository: KnowledgeRepositoryProtocol,
+        audit: AuditService | None = None,
     ) -> None:
         self.revision_repository = revision_repository
         self.knowledge_repository = knowledge_repository
+        self.audit = audit
 
     def list_revisions(self, card_id: uuid.UUID) -> Sequence[KnowledgeRevision]:
         self._get_card(card_id)
@@ -67,6 +70,7 @@ class KnowledgeRevisionService:
         revision_id: uuid.UUID,
     ) -> KnowledgeCard:
         card = self._get_card(card_id)
+        before = self.snapshot(card)
         revision = self.revision_repository.get(card_id, revision_id)
         if revision is None:
             raise KnowledgeRevisionNotFoundError
@@ -82,13 +86,19 @@ class KnowledgeRevisionService:
                 action="restore",
                 note=f"Ripristinata revisione #{revision.revision_number}",
             )
+            if self.audit:
+                self.audit.record_change(action=KNOWLEDGE_REVISION_RESTORED, entity_type="knowledge_card", entity_id=card.id, before=before, after=self.snapshot(restored))
             self.knowledge_repository.commit()
             return restored
         except IntegrityError as exc:
             self.knowledge_repository.rollback()
+            if self.audit:
+                self.audit.record_failure_after_rollback(entity_type="knowledge_card", entity_id=card.id, code="persistence_error", commit=self.knowledge_repository.commit, rollback=self.knowledge_repository.rollback)
             raise KnowledgeRevisionPersistenceError from exc
         except Exception:
             self.knowledge_repository.rollback()
+            if self.audit:
+                self.audit.record_failure_after_rollback(entity_type="knowledge_card", entity_id=card.id, code="persistence_error", commit=self.knowledge_repository.commit, rollback=self.knowledge_repository.rollback)
             raise
 
     @classmethod

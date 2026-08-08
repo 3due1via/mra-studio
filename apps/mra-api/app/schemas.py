@@ -117,6 +117,28 @@ class AuthResponse(BaseModel):
     user: UserRead
 
 
+class AuditEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    occurred_at: datetime
+    actor_user_id: uuid.UUID | None
+    actor_email_snapshot: str | None
+    action: str
+    entity_type: str
+    entity_id: uuid.UUID | None
+    outcome: Literal["success", "failure"]
+    request_id: uuid.UUID
+    changed_fields: list[str]
+    changes: dict[str, object]
+    metadata_json: dict[str, object]
+
+
+class AuditEventPage(BaseModel):
+    items: list[AuditEventRead]
+    next_cursor: str | None = None
+
+
 class KnowledgeCardBase(BaseModel):
     code: str = Field(min_length=3, max_length=64)
     title: str = Field(min_length=2, max_length=255)

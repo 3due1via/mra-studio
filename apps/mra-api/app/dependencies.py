@@ -21,47 +21,62 @@ from app.services.auth_service import AuthenticationError, AuthContext, AuthServ
 from app.services.password_service import PasswordService
 from app.config import settings
 from app.browser_security import validate_browser_request
+from app.audit_context import get_request_audit_context
+from app.repositories.audit_repository import SqlAlchemyAuditRepository
+from app.services.audit_service import AuditService
 
 password_service = PasswordService()
 
 
-def get_knowledge_revision_service_from_db(db: Session) -> KnowledgeRevisionService:
+def get_audit_service(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> AuditService:
+    return AuditService(SqlAlchemyAuditRepository(db), get_request_audit_context(request))
+
+
+def get_knowledge_revision_service_from_db(db: Session, audit: AuditService | None = None) -> KnowledgeRevisionService:
     return KnowledgeRevisionService(
         SqlAlchemyKnowledgeRevisionRepository(db),
         SqlAlchemyKnowledgeRepository(db),
+        audit,
     )
 
 
-def get_knowledge_service(db: Session = Depends(get_db)) -> KnowledgeService:
-    revision_service = get_knowledge_revision_service_from_db(db)
+def get_knowledge_service(db: Session = Depends(get_db), audit: AuditService = Depends(get_audit_service)) -> KnowledgeService:
+    revision_service = get_knowledge_revision_service_from_db(db, audit)
     return KnowledgeService(
         SqlAlchemyKnowledgeRepository(db),
         revision_service=revision_service,
+        audit=audit,
     )
 
 
 def get_knowledge_relation_service(
     db: Session = Depends(get_db),
+    audit: AuditService = Depends(get_audit_service),
 ) -> KnowledgeRelationService:
     knowledge_repository = SqlAlchemyKnowledgeRepository(db)
     return KnowledgeRelationService(
         SqlAlchemyKnowledgeRelationRepository(db),
         knowledge_repository,
+        audit,
     )
 
 
 def get_knowledge_revision_service(
     db: Session = Depends(get_db),
+    audit: AuditService = Depends(get_audit_service),
 ) -> KnowledgeRevisionService:
-    return get_knowledge_revision_service_from_db(db)
+    return get_knowledge_revision_service_from_db(db, audit)
 
 
-def get_workspace_service(db: Session = Depends(get_db)) -> WorkspaceService:
-    return WorkspaceService(SqlAlchemyWorkspaceRepository(db))
+def get_workspace_service(db: Session = Depends(get_db), audit: AuditService = Depends(get_audit_service)) -> WorkspaceService:
+    return WorkspaceService(SqlAlchemyWorkspaceRepository(db), audit)
 
 
-def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
-    return AuthService(SqlAlchemyAuthRepository(db), password_service)
+def get_auth_service(db: Session = Depends(get_db), audit: AuditService = Depends(get_audit_service)) -> AuthService:
+    return AuthService(SqlAlchemyAuthRepository(db), password_service, audit)
 
 
 def get_current_auth(
@@ -69,7 +84,9 @@ def get_current_auth(
     service: AuthService = Depends(get_auth_service),
 ) -> AuthContext:
     try:
-        return service.authenticate(request.cookies.get(settings.session_cookie_name))
+        context = service.authenticate(request.cookies.get(settings.session_cookie_name))
+        get_request_audit_context(request).set_actor(context.user.id, context.user.email)
+        return context
     except AuthenticationError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticazione richiesta.") from exc
 

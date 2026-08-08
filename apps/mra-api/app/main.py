@@ -1,5 +1,6 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -14,6 +15,9 @@ from app.routers.objects import router as objects_router
 from app.routers.projects import router as projects_router
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
+from app.audit_context import bind_audit_context, create_audit_context, reset_audit_context
+from app.routers.audit import router as audit_router
+from app.services.audit_service import AuditUnavailableError
 
 
 app = FastAPI(
@@ -28,7 +32,28 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Accept", "Content-Type", "X-CSRF-Token"],
+    expose_headers=["X-Request-ID"],
 )
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    context = create_audit_context()
+    request.state.audit_context = context
+    token = bind_audit_context(context)
+    try:
+        try:
+            response = await call_next(request)
+        except Exception:
+            response = JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "Errore interno del servizio."},
+            )
+        response.headers["X-Request-ID"] = str(context.request_id)
+        return response
+    finally:
+        reset_audit_context(token)
+        request.state.audit_context = None
 
 app.include_router(knowledge_router)
 app.include_router(knowledge_relations_router)
@@ -38,6 +63,15 @@ app.include_router(environments_router)
 app.include_router(objects_router)
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(audit_router)
+
+
+@app.exception_handler(AuditUnavailableError)
+async def audit_unavailable_handler(_request: Request, _exc: AuditUnavailableError):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "Servizio temporaneamente non disponibile."},
+    )
 
 
 @app.get("/", tags=["system"])

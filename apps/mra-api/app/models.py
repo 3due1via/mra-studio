@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -62,6 +62,44 @@ class AuthSession(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
 
     user: Mapped[User] = relationship(back_populates="sessions")
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        CheckConstraint("outcome IN ('success', 'failure')", name="ck_audit_events_outcome"),
+        Index("ix_audit_events_occurred_id", "occurred_at", "id"),
+        Index("ix_audit_events_actor_occurred", "actor_user_id", "occurred_at"),
+        Index("ix_audit_events_action_occurred", "action", "occurred_at"),
+        Index("ix_audit_events_entity_occurred", "entity_type", "entity_id", "occurred_at"),
+        Index("ix_audit_events_outcome_occurred", "outcome", "occurred_at"),
+        Index("ix_audit_events_request_id", "request_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    actor_email_snapshot: Mapped[str | None] = mapped_column(String(320))
+    action: Mapped[str] = mapped_column(String(100))
+    entity_type: Mapped[str] = mapped_column(String(60))
+    entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    outcome: Mapped[str] = mapped_column(String(20))
+    request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    changed_fields: Mapped[list] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    changes: Mapped[dict] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    metadata_json: Mapped[dict] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
 
 
 class KnowledgeCard(Base):

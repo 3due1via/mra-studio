@@ -9,6 +9,7 @@ from app.repositories.knowledge_repository import (
 )
 from app.schemas import KnowledgeCardCreate, KnowledgeCardUpdate
 from app.services.knowledge_revision_service import KnowledgeRevisionService
+from app.services.audit_service import AuditService, KNOWLEDGE_CARD_CREATED, KNOWLEDGE_CARD_UPDATED, KNOWLEDGE_CARD_DELETED
 
 
 class KnowledgeCardNotFoundError(Exception):
@@ -34,9 +35,19 @@ class KnowledgeService:
         self,
         repository: KnowledgeRepositoryProtocol,
         revision_service: KnowledgeRevisionService | None = None,
+        audit: AuditService | None = None,
     ) -> None:
         self.repository = repository
         self.revision_service = revision_service
+        self.audit = audit
+
+    @staticmethod
+    def _snapshot(card: KnowledgeCard) -> dict:
+        return {field: getattr(card, field) for field in KnowledgeRevisionService.SNAPSHOT_FIELDS}
+
+    def _failure(self, card_id: uuid.UUID | None) -> None:
+        if self.audit:
+            self.audit.record_failure_after_rollback(entity_type="knowledge_card", entity_id=card_id, code="persistence_error", commit=self.repository.commit, rollback=self.repository.rollback)
 
     def list_cards(
         self,
@@ -68,15 +79,19 @@ class KnowledgeService:
             created = self.repository.add(card)
             if self.revision_service is not None:
                 self.revision_service.record(created, action="create")
+            if self.audit:
+                self.audit.record_change(action=KNOWLEDGE_CARD_CREATED, entity_type="knowledge_card", entity_id=created.id, before=None, after=self._snapshot(created))
             self.repository.commit()
             return created
         except IntegrityError as exc:
             self.repository.rollback()
             if _is_code_conflict(exc):
                 raise KnowledgeCardCodeConflictError from exc
+            self._failure(card.id)
             raise KnowledgePersistenceError from exc
         except Exception:
             self.repository.rollback()
+            self._failure(card.id)
             raise
 
     def update_card(
@@ -85,6 +100,7 @@ class KnowledgeService:
         payload: KnowledgeCardUpdate,
     ) -> KnowledgeCard:
         card = self.get_card(card_id)
+        before = self._snapshot(card)
 
         for field, value in payload.model_dump(
             exclude_unset=True
@@ -95,23 +111,32 @@ class KnowledgeService:
             saved = self.repository.save(card)
             if self.revision_service is not None:
                 self.revision_service.record(saved, action="update")
+            if self.audit:
+                self.audit.record_change(action=KNOWLEDGE_CARD_UPDATED, entity_type="knowledge_card", entity_id=saved.id, before=before, after=self._snapshot(saved))
             self.repository.commit()
             return saved
         except IntegrityError as exc:
             self.repository.rollback()
+            self._failure(card.id)
             raise KnowledgePersistenceError from exc
         except Exception:
             self.repository.rollback()
+            self._failure(card.id)
             raise
 
     def delete_card(self, card_id: uuid.UUID) -> None:
         card = self.get_card(card_id)
+        before = self._snapshot(card)
         try:
             self.repository.delete(card)
+            if self.audit:
+                self.audit.record_change(action=KNOWLEDGE_CARD_DELETED, entity_type="knowledge_card", entity_id=card.id, before=before, after=None)
             self.repository.commit()
         except IntegrityError as exc:
             self.repository.rollback()
+            self._failure(card.id)
             raise KnowledgePersistenceError from exc
         except Exception:
             self.repository.rollback()
+            self._failure(card.id)
             raise

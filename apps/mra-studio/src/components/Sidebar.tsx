@@ -40,6 +40,7 @@ const groups: Group[] = [
     title: "IMPOSTAZIONI",
     items: [
       { label: "Utenti e permessi", path: "/users", icon: "♙" },
+      { label: "Registro attività", path: "/activity", icon: "↺" },
       { label: "Impostazioni", path: "/settings", icon: "⚙" },
       { label: "Design System", path: "/design-system", icon: "◆", badge: "014" },
       { label: "Backup ed esportazione", path: "/backup", icon: "▣" },
@@ -59,7 +60,7 @@ export function Sidebar() {
         {groups.map((group) => (
           <section className="nav-group" key={group.title}>
             <p>{group.title}</p>
-            {group.items.filter((item) => item.path !== "/users" || user?.role === "admin").map((item) => (
+            {group.items.filter((item) => !["/users", "/activity"].includes(item.path) || user?.role === "admin").map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}

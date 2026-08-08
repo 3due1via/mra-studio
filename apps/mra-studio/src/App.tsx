@@ -11,6 +11,7 @@ import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage";
 import { AdminRoute, ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { UsersPage } from "./pages/UsersPage";
+import { ActivityPage } from "./pages/ActivityPage";
 
 export default function App() {
   return (
@@ -43,7 +44,7 @@ export default function App() {
         <Route path="/partners" element={<ModulePage title="Partners" />} />
         <Route path="/laboratory" element={<ModulePage title="Laboratory" />} />
         <Route path="/analytics" element={<ModulePage title="Analytics" />} />
-        <Route element={<AdminRoute />}><Route path="/users" element={<UsersPage />} /></Route>
+        <Route element={<AdminRoute />}><Route path="/users" element={<UsersPage />} /><Route path="/activity" element={<ActivityPage />} /></Route>
         <Route path="/forbidden" element={<ModulePage title="Accesso non consentito" />} />
         <Route path="/settings" element={<ModulePage title="Settings" />} />
         <Route path="/design-system" element={<DesignSystemPage />} />
