@@ -17,6 +17,7 @@ from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 from app.audit_context import bind_audit_context, create_audit_context, reset_audit_context
 from app.routers.audit import router as audit_router
+from app.routers.interventions import router as interventions_router
 from app.services.audit_service import AuditUnavailableError
 
 
@@ -64,6 +65,7 @@ app.include_router(objects_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(audit_router)
+app.include_router(interventions_router)
 
 
 @app.exception_handler(AuditUnavailableError)

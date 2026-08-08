@@ -7,6 +7,7 @@ from app.schemas import EnvironmentCreate, EnvironmentRead, EnvironmentUpdate
 from app.services.workspace_service import (
     EnvironmentNotFoundError,
     ProjectNotFoundError,
+    WorkspaceInUseError,
     WorkspacePersistenceError,
     WorkspaceService,
 )
@@ -89,5 +90,7 @@ def delete_environment(
         service.delete_environment(environment_id)
     except EnvironmentNotFoundError as exc:
         raise _not_found("Ambiente non trovato.") from exc
+    except WorkspaceInUseError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ambiente utilizzato da un intervento.") from exc
     except WorkspacePersistenceError as exc:
         raise _persistence_error() from exc

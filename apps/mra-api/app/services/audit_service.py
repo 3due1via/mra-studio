@@ -37,6 +37,14 @@ ENVIRONMENT_DELETED = "environment.deleted"
 MRA_OBJECT_CREATED = "mra_object.created"
 MRA_OBJECT_UPDATED = "mra_object.updated"
 MRA_OBJECT_DELETED = "mra_object.deleted"
+INTERVENTION_CREATED = "intervention.created"
+INTERVENTION_UPDATED = "intervention.updated"
+INTERVENTION_ASSIGNED = "intervention.assigned"
+INTERVENTION_STATUS_CHANGED = "intervention.status.changed"
+INTERVENTION_REOPENED = "intervention.reopened"
+INTERVENTION_CANCELLED = "intervention.cancelled"
+INTERVENTION_KNOWLEDGE_LINKED = "intervention.knowledge.linked"
+INTERVENTION_KNOWLEDGE_UNLINKED = "intervention.knowledge.unlinked"
 OPERATION_FAILED = "operation.failed"
 
 AUDIT_ACTIONS = frozenset(
@@ -44,7 +52,7 @@ AUDIT_ACTIONS = frozenset(
     for name, value in globals().items()
     if name.isupper() and isinstance(value, str) and ("." in value)
 )
-FAILURE_CODES = frozenset({"persistence_error", "audit_write_error"})
+FAILURE_CODES = frozenset({"persistence_error", "audit_write_error", "intervention_persistence_error"})
 
 
 class AuditCursorError(ValueError):

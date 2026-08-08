@@ -6,6 +6,7 @@ from app.dependencies import get_workspace_service, require_admin, require_csrf,
 from app.schemas import ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.workspace_service import (
     ProjectNotFoundError,
+    WorkspaceInUseError,
     WorkspacePersistenceError,
     WorkspaceService,
 )
@@ -77,5 +78,7 @@ def delete_project(
         service.delete_project(project_id)
     except ProjectNotFoundError as exc:
         raise _not_found(exc) from exc
+    except WorkspaceInUseError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Progetto utilizzato da un intervento.") from exc
     except WorkspacePersistenceError as exc:
         raise _persistence_error(exc) from exc

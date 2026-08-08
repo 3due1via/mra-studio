@@ -1,0 +1,11 @@
+export type InterventionStatus = "open" | "planned" | "in_progress" | "blocked" | "completed" | "cancelled";
+export type InterventionPriority = "low" | "normal" | "high" | "urgent";
+export type Intervention = { id:string; code:string; project_id:string; environment_id:string; mra_object_id:string; title:string; description:string; status:InterventionStatus; priority:InterventionPriority; assigned_user_id:string|null; created_by_user_id:string; due_at:string|null; started_at:string|null; completed_at:string|null; cancelled_at:string|null; resolution_summary:string|null; version:number; created_at:string; updated_at:string };
+export type InterventionPage = { items:Intervention[]; next_cursor:string|null };
+export type InterventionSummary = { open:number; in_progress:number; overdue:number; recently_completed:number };
+export type InterventionEvent = { id:string; intervention_id:string; event_type:string; actor_user_id:string; actor_display_name_snapshot:string; from_status:InterventionStatus|null; to_status:InterventionStatus|null; related_entity_id:string|null; note:string|null; resolution_summary_snapshot:string|null; occurred_at:string };
+export type InterventionLink = { id:string; intervention_id:string; knowledge_card_id:string; usage_type:"diagnostic_reference"|"procedure_applied"|"solution_used"; note:string; created_by_user_id:string; created_at:string };
+export type InterventionAssignee = { id:string; display_name:string; role:"admin"|"editor" };
+export type InterventionTransitionResult = { intervention_id:string; command_id:string; from_status:InterventionStatus; to_status:InterventionStatus; result_version:number; started_at:string|null; completed_at:string|null; cancelled_at:string|null; occurred_at:string };
+export type InterventionCreate = { client_request_id:string; project_id:string; environment_id:string; mra_object_id:string; title:string; description:string; priority:InterventionPriority; assigned_user_id:string|null; due_at:string|null };
+export type InterventionFilters = Partial<Pick<Intervention,"project_id"|"environment_id"|"mra_object_id"|"assigned_user_id"|"status"|"priority"|"created_by_user_id">> & { overdue?:boolean; search?:string };

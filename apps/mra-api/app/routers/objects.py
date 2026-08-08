@@ -7,6 +7,7 @@ from app.schemas import MraObjectCreate, MraObjectRead, MraObjectUpdate
 from app.services.workspace_service import (
     EnvironmentNotFoundError,
     MraObjectNotFoundError,
+    WorkspaceInUseError,
     WorkspacePersistenceError,
     WorkspaceService,
 )
@@ -89,5 +90,7 @@ def delete_object(
         service.delete_object(object_id)
     except MraObjectNotFoundError as exc:
         raise _not_found("Oggetto non trovato.") from exc
+    except WorkspaceInUseError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Oggetto utilizzato da un intervento.") from exc
     except WorkspacePersistenceError as exc:
         raise _persistence_error() from exc

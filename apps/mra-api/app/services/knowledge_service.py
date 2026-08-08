@@ -24,6 +24,10 @@ class KnowledgePersistenceError(Exception):
     pass
 
 
+class KnowledgeCardInUseError(Exception):
+    pass
+
+
 def _is_code_conflict(exc: IntegrityError) -> bool:
     diagnostic = getattr(exc.orig, "diag", None)
     constraint = getattr(diagnostic, "constraint_name", "")
@@ -134,6 +138,8 @@ class KnowledgeService:
             self.repository.commit()
         except IntegrityError as exc:
             self.repository.rollback()
+            if getattr(getattr(exc.orig, "diag", None), "constraint_name", None) == "fk_intervention_knowledge_links_card":
+                raise KnowledgeCardInUseError from exc
             self._failure(card.id)
             raise KnowledgePersistenceError from exc
         except Exception:

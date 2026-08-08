@@ -11,3 +11,10 @@ export function AdminRoute() {
   const { user } = useAuth();
   return user?.role === "admin" ? <Outlet /> : <Navigate to="/forbidden" replace />;
 }
+
+export const canEditInterventions = (role: "admin" | "editor" | "viewer" | null | undefined) => role === "editor" || role === "admin";
+
+export function EditorRoute() {
+  const { user } = useAuth();
+  return canEditInterventions(user?.role) ? <Outlet /> : <Navigate to="/interventions" replace />;
+}

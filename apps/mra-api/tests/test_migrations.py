@@ -31,8 +31,16 @@ EXPECTED_TABLES = {
     "environments",
     "mra_objects",
     "audit_events",
+    "interventions",
+    "intervention_events",
+    "intervention_knowledge_links",
 }
-HEAD_REVISION = "20260807_0003"
+HEAD_REVISION = "20260808_0004"
+
+
+def _assert_intervention_trigger_operational() -> None:
+    with engine.connect() as connection:
+        assert connection.scalar(sa.text("SELECT count(*) FROM pg_trigger WHERE tgname = 'intervention_events_append_only' AND tgenabled = 'O'")) == 1
 
 
 def _assert_audit_trigger_operational() -> None:
@@ -61,7 +69,9 @@ def test_00_alembic_upgrades_empty_database(integration_client):
     assert "audit_events" not in set(sa.inspect(engine).get_table_names())
     command.upgrade(config, "head")
     _assert_audit_trigger_operational()
-
+    _assert_intervention_trigger_operational()
+    with engine.connect() as connection:
+        assert connection.scalar(sa.text("SELECT count(*) FROM pg_class WHERE relkind='S' AND relname='intervention_code_seq'")) == 1
     inspector = sa.inspect(engine)
     assert EXPECTED_TABLES <= set(inspector.get_table_names())
 
@@ -72,12 +82,16 @@ def test_01_upgrade_build_003_schema_to_audit_head_enables_trigger(integration_c
         connection.exec_driver_sql("DROP SCHEMA public CASCADE")
         connection.exec_driver_sql("CREATE SCHEMA public")
     config = Config("alembic.ini")
-    command.upgrade(config, "20260807_0002")
-    assert "audit_events" not in set(sa.inspect(engine).get_table_names())
+    command.upgrade(config, "20260807_0003")
+    sentinel_id=str(uuid.uuid4());request_id=str(uuid.uuid4())
+    with engine.begin() as connection:
+        connection.execute(sa.text("INSERT INTO audit_events (id,action,entity_type,outcome,request_id) VALUES (:id,'project.created','project','success',:request_id)"),{"id":sentinel_id,"request_id":request_id})
     command.upgrade(config, "head")
+    with engine.connect() as connection: assert connection.scalar(sa.text("SELECT count(*) FROM audit_events WHERE id=:id"),{"id":sentinel_id})==1
     _assert_audit_trigger_operational()
-
-
+    _assert_intervention_trigger_operational()
+    with engine.connect() as connection:
+        assert connection.scalar(sa.text("SELECT count(*) FROM pg_class WHERE relkind='S' AND relname='intervention_code_seq'")) == 1
 def test_alembic_created_expected_schema(integration_client):
     inspector = sa.inspect(engine)
     assert EXPECTED_TABLES <= set(inspector.get_table_names())
@@ -98,6 +112,28 @@ def test_alembic_created_expected_schema(integration_client):
         for item in inspector.get_unique_constraints("knowledge_revisions")
     }
     assert ("card_id", "revision_number") in revision_uniques
+
+
+def test_intervention_0004_schema_sequence_defaults_constraints_and_triggers(integration_client):
+    inspector=sa.inspect(engine)
+    assert {"interventions","intervention_events","intervention_knowledge_links"} <= set(inspector.get_table_names())
+    assert {item["name"] for item in inspector.get_unique_constraints("environments")} >= {"uq_environments_id_project"}
+    assert {item["name"] for item in inspector.get_unique_constraints("mra_objects")} >= {"uq_mra_objects_id_environment"}
+    assert {item["name"] for item in inspector.get_foreign_keys("interventions")} >= {"fk_interventions_environment_project","fk_interventions_object_environment"}
+    assert {item["name"] for item in inspector.get_check_constraints("interventions")} >= {"ck_interventions_status","ck_interventions_priority","ck_interventions_version"}
+    assert {item["name"] for item in inspector.get_indexes("interventions")} >= {"ix_interventions_created_id","ix_interventions_scope","ix_interventions_status_priority","ix_interventions_assignee","ix_interventions_due_at"}
+    with engine.begin() as connection:
+        assert connection.scalar(sa.text("SELECT count(*) FROM pg_class WHERE relkind='S' AND relname='intervention_code_seq'"))==1
+        assert connection.scalar(sa.text("SELECT count(*) FROM pg_trigger WHERE tgname='audit_events_append_only' AND tgenabled='O'"))==1
+        assert connection.scalar(sa.text("SELECT count(*) FROM pg_trigger WHERE tgname='intervention_events_append_only' AND tgenabled='O'"))==1
+        user_id=uuid.uuid4();project_id=uuid.uuid4();environment_id=uuid.uuid4();object_id=uuid.uuid4();intervention_id=uuid.uuid4()
+        connection.execute(sa.text("INSERT INTO users (id,email,display_name,password_hash,role,is_active,must_change_password,failed_login_attempts) VALUES (:id,:email,'Direct','unused','admin',true,false,0)"),{"id":user_id,"email":f"direct-{user_id}@example.test"})
+        connection.execute(sa.text("INSERT INTO projects (id,name,project_type,customer,description,status,progress) VALUES (:id,'Direct','Test','','','draft',0)"),{"id":project_id})
+        connection.execute(sa.text("INSERT INTO environments (id,project_id,name,environment_type,area_m2,height_m,width_m,length_m,notes) VALUES (:id,:project,'Direct','Test','','','','','')"),{"id":environment_id,"project":project_id})
+        connection.execute(sa.text("INSERT INTO mra_objects (id,environment_id,category,name,brand,model,serial_number,description,status,metadata_json) VALUES (:id,:environment,'Test','Direct','','','','','active','{}'::jsonb)"),{"id":object_id,"environment":environment_id})
+        connection.execute(sa.text("INSERT INTO interventions (id,client_request_id,client_request_fingerprint,project_id,environment_id,mra_object_id,title,created_by_user_id) VALUES (:id,:request,'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',:project,:environment,:object,'Direct insert',:user)"),{"id":intervention_id,"request":uuid.uuid4(),"project":project_id,"environment":environment_id,"object":object_id,"user":user_id})
+        row=connection.execute(sa.text("SELECT code,description,status,priority,version,created_at,updated_at FROM interventions WHERE id=:id"),{"id":intervention_id}).mappings().one()
+        assert row["code"].startswith("INT-") and row["description"]=="" and row["status"]=="open" and row["priority"]=="normal" and row["version"]==1 and row["created_at"] and row["updated_at"]
 
 
 def test_compatible_schema_is_accepted(integration_client):
@@ -168,6 +204,9 @@ def test_initial_downgrade_is_non_destructive(integration_client):
             sa.select(sa.func.count()).select_from(Project)
         ) == 1
     _assert_audit_trigger_operational()
+    _assert_intervention_trigger_operational()
+    with engine.connect() as connection:
+        assert connection.scalar(sa.text("SELECT count(*) FROM pg_class WHERE relkind='S' AND relname='intervention_code_seq'")) == 1
 
 
 def test_audit_events_are_database_append_only(integration_client):

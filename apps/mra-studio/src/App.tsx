@@ -8,10 +8,12 @@ import { ReadyToWorkPage } from "./pages/ReadyToWorkPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
 import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage";
-import { AdminRoute, ProtectedRoute } from "./auth/ProtectedRoute";
+import { AdminRoute, EditorRoute, ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ActivityPage } from "./pages/ActivityPage";
+import { InterventionsPage } from "./pages/InterventionsPage";
+import { InterventionDetailPage } from "./pages/InterventionDetailPage";
 
 export default function App() {
   return (
@@ -24,6 +26,9 @@ export default function App() {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="/environments/:environmentId" element={<EnvironmentDetailPage />} />
+        <Route path="/interventions" element={<InterventionsPage />} />
+        <Route element={<EditorRoute />}><Route path="/interventions/new" element={<InterventionsPage />} /></Route>
+        <Route path="/interventions/:interventionId" element={<InterventionDetailPage />} />
 
         <Route path="/categories" element={<ModulePage title="Categorie" />} />
         <Route path="/tags" element={<ModulePage title="Etichette" />} />

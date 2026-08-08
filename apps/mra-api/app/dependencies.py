@@ -16,6 +16,8 @@ from app.services.knowledge_relation_service import KnowledgeRelationService
 from app.services.knowledge_revision_service import KnowledgeRevisionService
 from app.services.knowledge_service import KnowledgeService
 from app.services.workspace_service import WorkspaceService
+from app.repositories.intervention_repository import SqlAlchemyInterventionRepository
+from app.services.intervention_service import InterventionService
 from app.repositories.auth_repository import SqlAlchemyAuthRepository
 from app.services.auth_service import AuthenticationError, AuthContext, AuthService, token_hash
 from app.services.password_service import PasswordService
@@ -73,6 +75,10 @@ def get_knowledge_revision_service(
 
 def get_workspace_service(db: Session = Depends(get_db), audit: AuditService = Depends(get_audit_service)) -> WorkspaceService:
     return WorkspaceService(SqlAlchemyWorkspaceRepository(db), audit)
+
+
+def get_intervention_service(db: Session = Depends(get_db), audit: AuditService = Depends(get_audit_service)) -> InterventionService:
+    return InterventionService(SqlAlchemyInterventionRepository(db), audit)
 
 
 def get_auth_service(db: Session = Depends(get_db), audit: AuditService = Depends(get_audit_service)) -> AuthService:

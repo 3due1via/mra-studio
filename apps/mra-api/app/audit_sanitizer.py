@@ -106,6 +106,7 @@ SHORT_FIELDS: dict[str, frozenset[str]] = {
     "project": frozenset({"name", "project_type", "customer", "status", "progress"}),
     "environment": frozenset({"project_id", "name", "environment_type", "area_m2", "height_m", "width_m", "length_m"}),
     "mra_object": frozenset({"environment_id", "category", "name", "brand", "model", "serial_number", "status"}),
+    "intervention": frozenset({"title", "status", "priority", "assigned_user_id", "due_at", "started_at", "completed_at", "cancelled_at", "version"}),
     "auth_session": frozenset(),
     "security": frozenset(),
 }
@@ -116,6 +117,7 @@ LONG_FIELDS: dict[str, frozenset[str]] = {
     "project": frozenset({"description"}),
     "environment": frozenset({"notes"}),
     "mra_object": frozenset({"description", "metadata_json"}),
+    "intervention": frozenset({"description", "resolution_summary"}),
 }
 
 

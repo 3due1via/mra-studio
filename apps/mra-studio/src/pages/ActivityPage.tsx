@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "../services/apiClient";
 import { getAuditEvent, listAuditEvents } from "../services/auditApi";
 import type { AuditEvent, AuditFilters } from "../types/audit";
+import { useSearchParams } from "react-router-dom";
 
 export const auditActionLabels: Record<string, string> = {
   "auth.login.succeeded": "Accesso riuscito", "auth.login.failed": "Accesso non riuscito", "auth.account.locked": "Account bloccato",
@@ -13,12 +14,17 @@ export const auditActionLabels: Record<string, string> = {
   "project.created": "Progetto creato", "project.updated": "Progetto modificato", "project.deleted": "Progetto eliminato",
   "environment.created": "Ambiente creato", "environment.updated": "Ambiente modificato", "environment.deleted": "Ambiente eliminato",
   "mra_object.created": "Oggetto MRA creato", "mra_object.updated": "Oggetto MRA modificato", "mra_object.deleted": "Oggetto MRA eliminato",
+  "intervention.created": "Intervento creato", "intervention.updated": "Intervento modificato", "intervention.assigned": "Intervento assegnato",
+  "intervention.status.changed": "Stato intervento modificato", "intervention.reopened": "Intervento riaperto", "intervention.cancelled": "Intervento annullato",
+  "intervention.knowledge.linked": "Knowledge collegata all'intervento", "intervention.knowledge.unlinked": "Knowledge scollegata dall'intervento",
   "operation.failed": "Operazione non riuscita",
 };
 const actionLabel = (action: string) => auditActionLabels[action] ?? "Evento non riconosciuto";
 
 export function ActivityPage() {
-  const [filters, setFilters] = useState<AuditFilters>({}); const [draft, setDraft] = useState<AuditFilters>({});
+  const [searchParams] = useSearchParams();
+  const initialFilters: AuditFilters = { entity_type: searchParams.get("entity_type") || undefined, entity_id: searchParams.get("entity_id") || undefined };
+  const [filters, setFilters] = useState<AuditFilters>(initialFilters); const [draft, setDraft] = useState<AuditFilters>(initialFilters);
   const [items, setItems] = useState<AuditEvent[]>([]); const [cursor, setCursor] = useState<string | null>(null); const [selected, setSelected] = useState<AuditEvent | null>(null);
   const [loading, setLoading] = useState(true); const [loadingMore, setLoadingMore] = useState(false); const [error, setError] = useState("");
   const load = async (next?: string) => { next ? setLoadingMore(true) : setLoading(true); setError(""); try { const page = await listAuditEvents(filters, next); setItems((old) => next ? [...old, ...page.items] : page.items); setCursor(page.next_cursor); } catch (reason) { setError(reason instanceof Error ? reason.message : "Impossibile caricare le attività."); } finally { setLoading(false); setLoadingMore(false); } };

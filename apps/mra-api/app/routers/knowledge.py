@@ -11,6 +11,7 @@ from app.schemas import (
 from app.services.knowledge_service import (
     KnowledgeCardCodeConflictError,
     KnowledgeCardNotFoundError,
+    KnowledgeCardInUseError,
     KnowledgePersistenceError,
     KnowledgeService,
 )
@@ -131,6 +132,8 @@ def delete_card(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Knowledge Card non trovata.",
         ) from exc
+    except KnowledgeCardInUseError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Knowledge Card utilizzata da un intervento.") from exc
     except KnowledgePersistenceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

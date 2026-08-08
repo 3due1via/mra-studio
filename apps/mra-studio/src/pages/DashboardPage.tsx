@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { listKnowledgeCards } from "../services/knowledgeApi";
 import type { KnowledgeCard } from "../types/knowledge";
+import { interventionSummary } from "../services/interventionsApi";
 
 const demoCards = [
   { title: "Motorino tergicristallo", code: "MEC-TRG-001", status: "In revisione", progress: 75, image: "⚙" },
@@ -21,6 +22,7 @@ function statusLabel(status: KnowledgeCard["status"]) {
 
 export function DashboardPage() {
   const cards = useQuery({ queryKey: ["knowledge-cards", "dashboard"], queryFn: () => listKnowledgeCards() });
+  const interventions = useQuery({ queryKey: ["interventions-summary"], queryFn: interventionSummary });
   const values = cards.data ?? [];
   const visibleCards = useMemo(() => values.slice(0, 4), [values]);
 
@@ -34,6 +36,11 @@ export function DashboardPage() {
 
   return (
     <div className="mra-dashboard">
+      <section className="dashboard-stats" aria-label="Riepilogo interventi">
+        {interventions.isLoading ? <p>Caricamento interventi…</p> : interventions.isError ? <p role="alert">Riepilogo interventi non disponibile.</p> : [
+          ["Aperti", interventions.data?.open ?? 0], ["In corso", interventions.data?.in_progress ?? 0], ["Scaduti", interventions.data?.overdue ?? 0], ["Completati (30 giorni)", interventions.data?.recently_completed ?? 0],
+        ].map(([label,value]) => <Link to="/interventions" className="dash-stat blue" key={label}><div><span>{label}</span><strong>{value}</strong></div></Link>)}
+      </section>
       <section className="mra-hero">
         <div className="hero-copy">
           <p>👨‍🔧 MR. ACADEMY</p>

@@ -8,6 +8,7 @@ and only after the existing schema matches the SQLAlchemy baseline exactly.
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 import sys
 
@@ -41,6 +42,29 @@ class SchemaDriftError(RuntimeError):
 def _type_signature(connection: Connection, column_type: sa.types.TypeEngine) -> str:
     compiled = connection.dialect.type_compiler.process(column_type)
     return " ".join(compiled.upper().split())
+
+
+def _normalize_sql_expression(value: object | None) -> str | None:
+    if value is None:
+        return None
+    text_value = str(value).strip().lower()
+    text_value = re.sub(r"::(?:character varying|text|integer|bigint|regclass|timestamp with time zone)", "", text_value)
+    text_value = text_value.replace("(", "").replace(")", "")
+    text_value = re.sub(r"\s+", " ", text_value)
+    return text_value
+
+
+def _check_expression_equivalent(expected: object, actual: object) -> bool:
+    expected_text = _normalize_sql_expression(expected) or ""
+    actual_text = _normalize_sql_expression(actual) or ""
+    if expected_text == actual_text:
+        return True
+    if set(re.findall(r"'([^']*)'", expected_text)) != set(re.findall(r"'([^']*)'", actual_text)):
+        return False
+    for operator in (">=", "<=", " between ", " is null", "char_length"):
+        if (operator in expected_text) != (operator in actual_text):
+            return False
+    return True
 
 
 def _foreign_keys(table: sa.Table) -> set[tuple]:
@@ -150,6 +174,14 @@ def schema_drift(
                     f"{table_name}.{column_name}: nullable={actual['nullable']}, "
                     f"expected {expected.nullable}"
                 )
+            expected_default = _normalize_sql_expression(
+                expected.server_default.arg if expected.server_default is not None else None
+            )
+            actual_default = _normalize_sql_expression(actual.get("default"))
+            if expected_default != actual_default:
+                differences.append(
+                    f"{table_name}.{column_name}: server default {actual_default!r}, expected {expected_default!r}"
+                )
 
         expected_pk = tuple(table.primary_key.columns.keys())
         actual_pk = tuple(inspector.get_pk_constraint(table_name)["constrained_columns"])
@@ -179,6 +211,24 @@ def schema_drift(
         if actual_indexes != expected_indexes:
             differences.append(
                 f"{table_name}: indexes {actual_indexes!r}, expected {expected_indexes!r}"
+            )
+
+        expected_checks = {
+            constraint.name: constraint.sqltext
+            for constraint in table.constraints
+            if isinstance(constraint, sa.CheckConstraint)
+        }
+        actual_checks = {
+            item.get("name"): item.get("sqltext")
+            for item in inspector.get_check_constraints(table_name)
+        }
+        checks_match = set(expected_checks) == set(actual_checks) and all(
+            _check_expression_equivalent(expected_checks[name], actual_checks[name])
+            for name in expected_checks
+        )
+        if not checks_match:
+            differences.append(
+                f"{table_name}: check constraints {sorted(actual_checks)!r}, expected {sorted(expected_checks)!r}"
             )
 
     return differences

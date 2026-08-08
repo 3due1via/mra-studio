@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from app.services.intervention_note_policy import secure_operational_note
 
 KnowledgeStatus = Literal[
     "draft",
@@ -398,3 +399,153 @@ class MraObjectRead(MraObjectBase):
     environment_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+
+InterventionStatus = Literal["open", "planned", "in_progress", "blocked", "completed", "cancelled"]
+InterventionPriority = Literal["low", "normal", "high", "urgent"]
+InterventionUsageType = Literal["diagnostic_reference", "procedure_applied", "solution_used"]
+
+
+class InterventionCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    client_request_id: uuid.UUID
+    project_id: uuid.UUID
+    environment_id: uuid.UUID
+    mra_object_id: uuid.UUID
+    title: str = Field(min_length=1, max_length=255)
+    description: str = Field(default="", max_length=10_000)
+    priority: InterventionPriority = "normal"
+    assigned_user_id: uuid.UUID | None = None
+    due_at: datetime | None = None
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, value: str) -> str:
+        return _strip_required(value)
+
+
+class InterventionUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_version: int = Field(ge=1)
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=10_000)
+    priority: InterventionPriority | None = None
+    assigned_user_id: uuid.UUID | None = None
+    due_at: datetime | None = None
+
+    @field_validator("title")
+    @classmethod
+    def strip_optional_title(cls, value: str | None) -> str | None:
+        return _strip_required(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def require_change(self):
+        if not (self.model_fields_set - {"expected_version"}):
+            raise ValueError("Specificare almeno un campo da aggiornare.")
+        return self
+
+
+class InterventionTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    command_id: uuid.UUID
+    expected_version: int = Field(ge=1)
+    to_status: InterventionStatus
+    note: str | None = Field(default=None, max_length=1_000)
+    resolution_summary: str | None = Field(default=None, max_length=5_000)
+
+    @field_validator("note")
+    @classmethod
+    def secure_note(cls, value: str | None) -> str | None:
+        return secure_operational_note(value)
+
+
+class InterventionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    code: str
+    project_id: uuid.UUID
+    environment_id: uuid.UUID
+    mra_object_id: uuid.UUID
+    title: str
+    description: str
+    status: InterventionStatus
+    priority: InterventionPriority
+    assigned_user_id: uuid.UUID | None
+    created_by_user_id: uuid.UUID
+    due_at: datetime | None
+    started_at: datetime | None
+    completed_at: datetime | None
+    cancelled_at: datetime | None
+    resolution_summary: str | None
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class InterventionPage(BaseModel):
+    items: list[InterventionRead]
+    next_cursor: str | None = None
+
+
+class InterventionSummary(BaseModel):
+    open: int
+    in_progress: int
+    overdue: int
+    recently_completed: int
+
+
+class InterventionAssigneeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    display_name: str
+    role: Literal["admin", "editor"]
+
+
+class InterventionTransitionResult(BaseModel):
+    intervention_id: uuid.UUID
+    command_id: uuid.UUID
+    from_status: InterventionStatus
+    to_status: InterventionStatus
+    result_version: int
+    started_at: datetime | None
+    completed_at: datetime | None
+    cancelled_at: datetime | None
+    occurred_at: datetime
+
+
+class InterventionEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    intervention_id: uuid.UUID
+    event_type: str
+    actor_user_id: uuid.UUID
+    actor_display_name_snapshot: str
+    from_status: InterventionStatus | None
+    to_status: InterventionStatus | None
+    related_entity_id: uuid.UUID | None
+    note: str | None
+    resolution_summary_snapshot: str | None
+    occurred_at: datetime
+
+
+class InterventionKnowledgeCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    knowledge_card_id: uuid.UUID
+    usage_type: InterventionUsageType
+    note: str = Field(default="", max_length=500)
+
+    @field_validator("note")
+    @classmethod
+    def secure_note(cls, value: str) -> str:
+        return secure_operational_note(value, maximum=500) or ""
+
+
+class InterventionKnowledgeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    intervention_id: uuid.UUID
+    knowledge_card_id: uuid.UUID
+    usage_type: InterventionUsageType
+    note: str
+    created_by_user_id: uuid.UUID
+    created_at: datetime

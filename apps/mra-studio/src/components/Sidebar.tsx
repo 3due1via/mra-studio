@@ -10,6 +10,7 @@ const groups: Group[] = [
     items: [
       { label: "Home", path: "/dashboard", icon: "⌂" },
       { label: "I miei progetti", path: "/projects", icon: "▦", badge: "NUOVO" },
+      { label: "Interventi", path: "/interventions", icon: "⚒", badge: "NUOVO" },
       { label: "Tutte le schede", path: "/knowledge", icon: "▤" },
       { label: "Categorie", path: "/categories", icon: "□" },
       { label: "Etichette", path: "/tags", icon: "◇" },

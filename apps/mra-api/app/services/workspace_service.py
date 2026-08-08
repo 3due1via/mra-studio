@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import Sequence
+from sqlalchemy.exc import IntegrityError
 
 from app.models import Environment, MraObject, Project
 from app.repositories.workspace_repository import WorkspaceRepositoryProtocol
@@ -31,6 +32,10 @@ class MraObjectNotFoundError(Exception):
 
 
 class WorkspacePersistenceError(Exception):
+    pass
+
+
+class WorkspaceInUseError(Exception):
     pass
 
 
@@ -159,6 +164,13 @@ class WorkspaceService:
             if self.audit:
                 self.audit.record_change(action=action, entity_type=entity_type, entity_id=entity.id, before=before, after=None)
             self.repository.commit()
+        except IntegrityError as exc:
+            self.repository.rollback()
+            constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+            if constraint in {"fk_interventions_project", "fk_interventions_environment", "fk_interventions_object", "fk_interventions_environment_project", "fk_interventions_object_environment"}:
+                raise WorkspaceInUseError from exc
+            self._failure(entity_type, entity.id)
+            raise WorkspacePersistenceError from exc
         except Exception as exc:
             self.repository.rollback()
             self._failure(entity_type, entity.id)
